@@ -6,6 +6,7 @@ import {
   ArrowRight, ShieldCheck, SparkleIcon
 } from 'lucide-react';
 import API from '../../api/axiosInstance';
+import { MASTER_CMS_SECTIONS } from '../../data/defaultMasterSections';
 
 const TABS = [
   { id: 'HOME PAGE', label: 'Home Page', desc: 'Hero video, bestsellers, regenerative pillars, reels, certifications & blogs.' },
@@ -42,8 +43,8 @@ const WebsiteEditor = () => {
   const [activeTab, setActiveTab] = useState('HOME PAGE');
   const [deviceView, setDeviceView] = useState('desktop'); // desktop | tablet | mobile
   const [previewKey, setPreviewKey] = useState(Date.now());
-  const [sections, setSections] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [sections, setSections] = useState(MASTER_CMS_SECTIONS);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Selected Active Section & Live Form State
@@ -55,22 +56,27 @@ const WebsiteEditor = () => {
 
   const fetchSections = async () => {
     try {
-      setLoading(true);
       const { data } = await API.get('/admin/content/sections');
-      if (data.success && data.sections) {
+      if (data.success && data.sections && data.sections.length > 0) {
         setSections(data.sections);
-        // Default select first section of active tab if none selected
-        const tabSecs = data.sections.filter(s => s.page === activeTab || (activeTab === 'B2B' && s.page === 'B2B (WHOLESALE)'));
+        const tabSecs = data.sections.filter(s => s.page === activeTab || (activeTab === 'B2B' && (s.page === 'B2B' || s.page === 'B2B (WHOLESALE)')));
         if (tabSecs.length > 0) {
           loadSectionData(tabSecs[0]);
-        } else if (data.sections.length > 0) {
-          loadSectionData(data.sections[0]);
+        }
+      } else {
+        setSections(MASTER_CMS_SECTIONS);
+        const tabSecs = MASTER_CMS_SECTIONS.filter(s => s.page === activeTab || (activeTab === 'B2B' && (s.page === 'B2B' || s.page === 'B2B (WHOLESALE)')));
+        if (tabSecs.length > 0) {
+          loadSectionData(tabSecs[0]);
         }
       }
     } catch (e) {
-      console.error('Sections fetch error', e);
-    } finally {
-      setLoading(false);
+      console.warn('Sections API notice - using full master sections catalogue:', e.message);
+      setSections(MASTER_CMS_SECTIONS);
+      const tabSecs = MASTER_CMS_SECTIONS.filter(s => s.page === activeTab || (activeTab === 'B2B' && (s.page === 'B2B' || s.page === 'B2B (WHOLESALE)')));
+      if (tabSecs.length > 0) {
+        loadSectionData(tabSecs[0]);
+      }
     }
   };
 
