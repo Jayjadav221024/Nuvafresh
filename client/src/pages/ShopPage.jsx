@@ -3,6 +3,7 @@ import ProductCard from '../components/home/ProductCard';
 import { Search, Sparkles } from 'lucide-react';
 import API from '../api/axiosInstance';
 import { ShopCatalogSkeleton } from '../components/common/Skeleton';
+import rawCsvProducts from '../data/csvProducts.json';
 
 const DEFAULT_CATEGORIES = [
   'All',
@@ -14,9 +15,9 @@ const DEFAULT_CATEGORIES = [
 ];
 
 const ShopPage = () => {
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(rawCsvProducts || []);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [search, setSearch] = useState('');
   const [ozoneOnly, setOzoneOnly] = useState(false);
@@ -24,13 +25,12 @@ const ShopPage = () => {
   React.useEffect(() => {
     const fetchCatalog = async () => {
       try {
-        setLoading(true);
         const [prodRes, catRes] = await Promise.allSettled([
           API.get('/products'),
           API.get('/admin/categories/public')
         ]);
 
-        if (prodRes.status === 'fulfilled' && prodRes.value.data.success) {
+        if (prodRes.status === 'fulfilled' && prodRes.value.data.success && prodRes.value.data.products?.length > 0) {
           setProducts(prodRes.value.data.products);
         }
 
@@ -39,9 +39,8 @@ const ShopPage = () => {
           setCategories(names);
         }
       } catch (e) {
-        console.error('Catalog fetch fallback');
-      } finally {
-        setLoading(false);
+        // Fallback to embedded products
+        setProducts(rawCsvProducts);
       }
     };
     fetchCatalog();
