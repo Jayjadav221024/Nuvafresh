@@ -202,6 +202,27 @@ const ProductDetailPage = () => {
     fetchFaqs();
   }, [id]);
 
+  const [uploadedReviewImages, setUploadedReviewImages] = useState([]);
+
+  const handleImageFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result) {
+          setUploadedReviewImages(prev => [...prev, reader.result]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeUploadedImage = (index) => {
+    setUploadedReviewImages(prev => prev.filter((_, idx) => idx !== index));
+  };
+
   const handleReviewSubmit = (e) => {
     e.preventDefault();
     if (!newReview.author || !newReview.title || !newReview.body) {
@@ -217,12 +238,13 @@ const ProductDetailPage = () => {
       title: newReview.title,
       body: newReview.body,
       helpful: 0,
-      images: []
+      images: [...uploadedReviewImages]
     };
     setReviews([created, ...reviews]);
     setShowReviewForm(false);
     setNewReview({ author: '', email: '', rating: 5, title: '', body: '' });
-    alert('Thank you! Your verified review has been published.');
+    setUploadedReviewImages([]);
+    alert('Thank you! Your verified review with photos has been published.');
   };
 
   if (loading || !product) {
@@ -689,9 +711,43 @@ const ProductDetailPage = () => {
               />
             </div>
 
+            {/* Photo / Image Upload Section for User Reviews */}
+            <div className="space-y-2 pt-1">
+              <label className="block text-xs font-bold text-neutral-700">
+                Upload Real Product Photos (Optional)
+              </label>
+              
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="cursor-pointer px-4 py-2.5 rounded-xl border-2 border-dashed border-[#2d472c]/40 hover:border-[#2d472c] bg-[#f4f7f4] flex items-center gap-2 text-xs font-bold text-[#2d472c] transition-all">
+                  <Camera className="w-4 h-4" />
+                  <span>Choose Photos</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageFileChange}
+                    className="hidden"
+                  />
+                </label>
+                
+                {uploadedReviewImages.map((img, idx) => (
+                  <div key={idx} className="relative w-14 h-14 rounded-xl border border-neutral-200 overflow-hidden group/img">
+                    <img src={img} alt="Uploaded preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeUploadedImage(idx)}
+                      className="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity text-[10px] font-bold"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-full bg-[#2d472c] text-white text-xs font-bold shadow hover:bg-[#20341f] cursor-pointer"
+              className="px-6 py-2.5 rounded-full bg-[#2d472c] text-white text-xs font-bold shadow hover:bg-[#20341f] cursor-pointer mt-2"
             >
               Submit Review
             </button>
@@ -713,6 +769,20 @@ const ProductDetailPage = () => {
                 </div>
                 <h4 className="text-sm font-bold text-neutral-900 leading-snug">{rev.title}</h4>
                 <p className="text-xs text-neutral-600 leading-relaxed">{rev.body}</p>
+                
+                {/* Display Uploaded User Review Photos */}
+                {rev.images && rev.images.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pt-2">
+                    {rev.images.map((pic, pIdx) => (
+                      <img
+                        key={pIdx}
+                        src={pic}
+                        alt="Customer upload"
+                        className="w-14 h-14 rounded-xl object-cover border border-neutral-200 shadow-2xs"
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between pt-3 border-t border-neutral-200/60 text-xs">
