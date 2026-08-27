@@ -3,24 +3,36 @@ import ProductCard from '../components/home/ProductCard';
 import { Search, Sparkles } from 'lucide-react';
 import API from '../api/axiosInstance';
 import { ShopCatalogSkeleton } from '../components/common/Skeleton';
+import { useSearchParams } from 'react-router-dom';
 import rawCsvProducts from '../data/csvProducts.json';
 
 const DEFAULT_CATEGORIES = [
   'All',
-  'Ozone Washed Vegetables',
-  'A2 Ghee',
-  'Stone Pressed Oils',
-  'Organic Atta',
-  'Cold-Pressed Juices'
+  'Fresh Produce',
+  'Pulses & Lentils',
+  'Grains & Staples',
+  'Spices & Seasonings',
+  'Oils & Ghee',
+  'Healthy Sweeteners'
 ];
 
 const ShopPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialCategory = searchParams.get('category') || 'All';
+
   const [products, setProducts] = useState(rawCsvProducts || []);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [loading, setLoading] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [search, setSearch] = useState('');
   const [ozoneOnly, setOzoneOnly] = useState(false);
+
+  React.useEffect(() => {
+    const urlCat = searchParams.get('category');
+    if (urlCat) {
+      setSelectedCategory(urlCat);
+    }
+  }, [searchParams]);
 
   React.useEffect(() => {
     const fetchCatalog = async () => {
@@ -36,15 +48,24 @@ const ShopPage = () => {
 
         if (catRes.status === 'fulfilled' && catRes.value.data.success && catRes.value.data.categories?.length > 0) {
           const names = ['All', ...catRes.value.data.categories.map(c => c.name)];
-          setCategories(names);
+          setCategories(Array.from(new Set([...DEFAULT_CATEGORIES, ...names])));
         }
       } catch (e) {
-        // Fallback to embedded products
         setProducts(rawCsvProducts);
       }
     };
     fetchCatalog();
   }, []);
+
+  const handleSelectCategory = (cat) => {
+    setSelectedCategory(cat);
+    if (cat === 'All') {
+      searchParams.delete('category');
+      setSearchParams(searchParams);
+    } else {
+      setSearchParams({ category: cat });
+    }
+  };
 
   const filtered = products.filter((p) => {
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
@@ -100,8 +121,8 @@ const ShopPage = () => {
           {categories.map((cat) => (
             <button
               key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+              onClick={() => handleSelectCategory(cat)}
+              className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory === cat
                   ? 'bg-[#2d472c] text-white shadow-md'
                   : 'bg-white text-secondary-800 border border-secondary-300 hover:border-primary-500'
