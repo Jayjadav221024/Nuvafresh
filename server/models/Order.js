@@ -16,7 +16,7 @@ const orderSchema = new mongoose.Schema(
     user: { 
       type: mongoose.Schema.Types.ObjectId, 
       ref: 'User', 
-      required: true,
+      required: false,
       index: true 
     },
     items: [orderItemSchema],
@@ -24,19 +24,20 @@ const orderSchema = new mongoose.Schema(
     discountApplied: { type: Number, default: 0 },
     paymentStatus: { 
       type: String, 
-      enum: ['Pending', 'Completed', 'Failed'], 
+      enum: ['Pending', 'Completed', 'Paid', 'Failed'], 
       default: 'Pending' 
     },
     paymentMethod: { 
       type: String, 
-      enum: ['COD', 'Online'], 
-      default: 'COD' 
+      default: 'UPI QR Pay' 
     },
     orderStatus: { 
       type: String, 
-      enum: ['Pending', 'Ozone Purifying', 'Out for Delivery', 'Delivered', 'Cancelled'], 
-      default: 'Pending' 
+      enum: ['Placed', 'Pending', 'Ozone Washing', 'Ozone Purifying', 'Quality Inspected', 'Dispatched', 'Out for Delivery', 'Delivered', 'Cancelled'], 
+      default: 'Placed' 
     },
+    currentStage: { type: Number, default: 1 },
+    tracking: { type: mongoose.Schema.Types.Mixed, default: {} },
     deliveryAddress: {
       street: String,
       city: String,

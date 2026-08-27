@@ -8,13 +8,6 @@ const productSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: [
-        'Ozone Washed Vegetables',
-        'A2 Ghee',
-        'Stone Pressed Oils',
-        'Organic Atta',
-        'Cold-Pressed Juices'
-      ],
       index: true
     },
     price: { type: Number, required: true, min: 0 },
