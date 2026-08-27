@@ -1,33 +1,16 @@
 services:
-  # 1. BACKEND API WEB SERVICE (Folder: /server)
   - type: web
-    name: nuva-backend
+    name: nuva-fresh-platform
     env: node
-    rootDir: server
     plan: free
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: npm run build
+    startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 5000
+        value: 10000
       - key: JWT_SECRET
         generateValue: true
       - key: MONGO_URI
-        sync: false
-
-  # 2. FRONTEND STATIC SITE (Folder: /client)
-  - type: web
-    name: nuva-frontend
-    env: static
-    rootDir: client
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: VITE_API_BASE_URL
         sync: false
