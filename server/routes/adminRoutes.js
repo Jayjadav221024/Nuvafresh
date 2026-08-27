@@ -264,13 +264,26 @@ router.get('/media/public', async (req, res) => {
   }
 });
 
-// Public Content Section API for storefront components
+// Public Content Section API for storefront components and Admin Website Editor
 router.get('/content/sections', async (req, res) => {
   try {
     let sections = [];
     try {
       sections = await SectionContent.find().sort({ page: 1, createdAt: 1 });
     } catch (e) {}
+
+    // If database has 0 sections, auto-seed and return MASTER_CMS_SECTIONS
+    if (!sections || sections.length === 0) {
+      try {
+        const { MASTER_CMS_SECTIONS } = await import('../scripts/seedSectionContent.js');
+        if (MASTER_CMS_SECTIONS && MASTER_CMS_SECTIONS.length > 0) {
+          sections = MASTER_CMS_SECTIONS;
+          // Asynchronously upsert to DB in background
+          SectionContent.insertMany(MASTER_CMS_SECTIONS).catch(() => {});
+        }
+      } catch (seedErr) {}
+    }
+
     res.json({ success: true, count: sections.length, sections });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });

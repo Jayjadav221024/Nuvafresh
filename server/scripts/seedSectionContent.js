@@ -4,7 +4,7 @@ import SectionContent from '../models/SectionContent.js';
 
 dotenv.config();
 
-const MASTER_CMS_SECTIONS = [
+export const MASTER_CMS_SECTIONS = [
   // 1. SITE-WIDE
   {
     sectionKey: 'sitewide.announcement',

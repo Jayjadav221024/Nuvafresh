@@ -189,6 +189,21 @@ const seedDatabase = async () => {
     await Testimonial.insertMany(testimonialsToInsert);
     console.log(`✅ ${testimonialsToInsert.length} Testimonials seeded into 'testimonials' collection.`);
 
+    // 8. Seed Master Website Sections (CMS Editor)
+    console.log('\n[8/8] Seeding Master Website Editor CMS Sections...');
+    const { MASTER_CMS_SECTIONS } = await import('./seedSectionContent.js');
+    if (MASTER_CMS_SECTIONS && MASTER_CMS_SECTIONS.length > 0) {
+      const SectionContent = (await import('../models/SectionContent.js')).default;
+      for (const sec of MASTER_CMS_SECTIONS) {
+        await SectionContent.findOneAndUpdate(
+          { sectionKey: sec.sectionKey },
+          sec,
+          { upsert: true, new: true }
+        );
+      }
+      console.log(`✅ ${MASTER_CMS_SECTIONS.length} Website CMS Section Schemas seeded into 'sectioncontents' collection.`);
+    }
+
     console.log('\n======================================================');
     console.log('🎉 ALL PROJECT DATA SUCCESSFULLY SEEDED IN DATABASE!');
     console.log('======================================================');
@@ -199,7 +214,8 @@ const seedDatabase = async () => {
     console.log('• categories');
     console.log('• coupons');
     console.log('• reels');
-    console.log('• testimonials\n');
+    console.log('• testimonials');
+    console.log('• sectioncontents (Full Website CMS Sections)\n');
 
     process.exit(0);
   } catch (error) {
