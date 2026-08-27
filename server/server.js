@@ -59,8 +59,8 @@ if (fs.existsSync(clientDistPath)) {
   });
 }
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) || 5000 : 5000;
 
-app.listen(PORT, () => {
-  console.log(`[Nuva Server Active]: REST API running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Nuva Server Active]: Express backend listening on 0.0.0.0:${PORT}`);
 });
