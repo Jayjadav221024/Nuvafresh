@@ -307,17 +307,39 @@ const CartDrawer = () => {
                   </div>
                 </div>
 
-                {/* Cart Items List */}
+                {/* Cart Items List or Reference Empty Cart View */}
                 {cart.length === 0 ? (
-                  <div className="py-16 text-center space-y-4">
-                    <div className="w-16 h-16 rounded-full bg-[#faf9f5] border border-neutral-200 flex items-center justify-center mx-auto text-neutral-400">
-                      <ShoppingBag className="h-7 w-7" />
+                  <div className="py-12 sm:py-16 flex flex-col items-center justify-center text-center space-y-6">
+                    {/* Organic Eco-Cloth Tote Bag */}
+                    <div className="relative w-48 sm:w-56 aspect-square flex items-center justify-center">
+                      <img
+                        src="/empty-cart-tote.jpg"
+                        alt="Pure Organic Tote Bag"
+                        className="w-full h-full object-contain drop-shadow-md select-none pointer-events-none transition-transform hover:scale-105 duration-300"
+                      />
                     </div>
-                    <div className="space-y-1">
-                      <h3 className="text-base font-bold text-neutral-900">Your basket is empty</h3>
-                      <p className="text-xs text-neutral-500 max-w-xs mx-auto">
-                        Explore our pure cold-pressed oils, A2 Vedic ghee, and Ozone-washed harvests from the recommendations.
+                    
+                    {/* Empty Cart Messaging Matching Reference */}
+                    <div className="space-y-2 max-w-sm">
+                      <h3 className="text-xl sm:text-2xl font-bold text-[#194e3a] font-sans tracking-tight">
+                        Nothing in your cart yet.
+                      </h3>
+                      <p className="text-xs sm:text-sm text-neutral-600 font-sans leading-relaxed">
+                        Let's fix that with something pure and delicious.
                       </p>
+                    </div>
+
+                    {/* Pill Continue Shopping Button Matching Reference */}
+                    <div>
+                      <button
+                        onClick={() => {
+                          setIsDrawerOpen(false);
+                          navigate('/shop');
+                        }}
+                        className="px-8 py-3.5 rounded-full bg-[#189b76] hover:bg-[#138061] text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all duration-200 active:scale-95 cursor-pointer"
+                      >
+                        Continue Shopping
+                      </button>
                     </div>
                   </div>
                 ) : (
