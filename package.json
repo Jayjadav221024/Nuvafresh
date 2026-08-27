@@ -6,6 +6,7 @@
   "scripts": {
     "build": "npm install --prefix client && npm run build --prefix client && npm install --prefix server",
     "start": "node server/server.js",
+    "seed": "node server/scripts/seedAtlas.js",
     "seed:atlas": "node server/scripts/seedAtlas.js",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
