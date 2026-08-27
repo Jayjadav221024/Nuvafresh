@@ -98,10 +98,45 @@ const B2B_OFFERINGS = [
   }
 ];
 
+// `logo` points at a file in /public/brands. Brands without a sourceable logo
+// fall back to the styled wordmark, as does any logo that fails to load.
+// `invert` flips light-on-transparent logos so they read on the white card.
 const TRUSTED_BRANDS = [
-  'BENTO B', 'nectar', 'Bansal Super Market', 'basta!', 'Boh!', 'GREENR', 
-  'ARTTH', 'mouj', "K's Verandah", 'lollo rosso', 'Picasso', 'THE BREWERY'
+  { name: 'BENTO B', logo: '/brands/bento-b.png' },
+  { name: 'nectar' },
+  { name: 'Bansal Super Market' },
+  { name: 'basta!' },
+  { name: 'Boh!' },
+  { name: 'GREENR', logo: '/brands/greenr.png' },
+  { name: 'ARTTH' },
+  { name: 'mouj' },
+  { name: "K's Verandah", logo: '/brands/ks-verandah.webp', invert: true },
+  { name: 'lollo rosso' },
+  { name: 'Picasso' },
+  { name: 'THE BREWERY', logo: '/brands/the-brewery.png', invert: true }
 ];
+
+const BrandLogo = ({ brand }) => {
+  const [failed, setFailed] = useState(false);
+
+  return (
+    <div className="h-24 sm:h-28 px-5 rounded-2xl bg-white border border-[#ded7c5] shadow-xs flex items-center justify-center text-center hover:border-[#2d472c] hover:shadow-md transition-all duration-200 group">
+      {brand.logo && !failed ? (
+        <img
+          src={brand.logo}
+          alt={`${brand.name} logo`}
+          loading="lazy"
+          onError={() => setFailed(true)}
+          className={`max-h-14 max-w-full w-auto object-contain grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition duration-300 ${brand.invert ? 'invert' : ''}`}
+        />
+      ) : (
+        <span className="font-display font-bold text-sm sm:text-base text-[#2d472c]">
+          {brand.name}
+        </span>
+      )}
+    </div>
+  );
+};
 
 const CERTIFICATIONS = [
   {
@@ -383,13 +418,8 @@ const B2BPage = () => {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
-          {TRUSTED_BRANDS.map((brand, idx) => (
-            <div
-              key={idx}
-              className="p-6 rounded-2xl bg-white border border-[#ded7c5] shadow-xs flex items-center justify-center text-center font-display font-bold text-sm sm:text-base text-[#2d472c] hover:border-[#2d472c] hover:shadow-md transition-all duration-200"
-            >
-              {brand}
-            </div>
+          {TRUSTED_BRANDS.map((brand) => (
+            <BrandLogo key={brand.name} brand={brand} />
           ))}
         </div>
       </section>

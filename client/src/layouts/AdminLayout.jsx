@@ -204,7 +204,13 @@ const ALL_ADMIN_NAV_ITEMS = NAV_GROUPS.flatMap(group => group.items);
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    try {
+      return localStorage.getItem('nuva_admin_theme') === 'dark';
+    } catch (e) {
+      return false;
+    }
+  });
   const [searchQuery, setSearchQuery] = useState('');
   
   const searchInputRef = useRef(null);
@@ -219,9 +225,25 @@ const AdminLayout = () => {
   };
 
   const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
+    const nextMode = !isDarkMode;
+    setIsDarkMode(nextMode);
+    try {
+      localStorage.setItem('nuva_admin_theme', nextMode ? 'dark' : 'light');
+    } catch (e) {}
+    if (nextMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   };
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // Global keyboard shortcut (Ctrl+K or /) to focus the Sidebar Search Bar
   useEffect(() => {
