@@ -393,14 +393,7 @@ const AdminLayout = () => {
             <ExternalLink className="h-3.5 w-3.5 text-neutral-400" />
           </a>
 
-          {/* O3 Chamber status badge */}
-          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1b3823] border border-[#25d366]/40 text-[#25d366] text-[11px] font-semibold">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#25d366] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#25d366]"></span>
-            </span>
-            <span>O₃ Active</span>
-          </div>
+
 
           {/* Theme Toggle */}
           <button
