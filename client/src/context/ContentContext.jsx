@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import API from '../api/axiosInstance';
+import { STORE_TOPICS, subscribeToStoreChanges } from '../lib/storeSync';
 
-const ContentContext = createContext();
+// Exported so the Admin Website Editor can wrap its live canvas with an
+// unsaved-draft override provider (instant WYSIWYG preview while typing).
+export const ContentContext = createContext();
 
 export const ContentProvider = ({ children }) => {
   const [sections, setSections] = useState({});
@@ -27,15 +30,9 @@ export const ContentProvider = ({ children }) => {
   useEffect(() => {
     fetchPublicContent();
 
-    // Listen for live CMS updates from Admin WebsiteEditor iframe or same-window changes
-    const handleMessage = (e) => {
-      if (e.data && (e.data.type === 'NUVA_CMS_UPDATED' || e.data.type === 'NUVA_SECTION_SAVED')) {
-        fetchPublicContent();
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    // Refetch when the Website Editor saves — in this window, in the editor's
+    // preview iframe, or from the admin open in a completely separate tab.
+    return subscribeToStoreChanges(STORE_TOPICS.CONTENT, fetchPublicContent);
   }, []);
 
   // Helper function to get a field with fallback default

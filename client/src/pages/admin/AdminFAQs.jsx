@@ -1,9 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  HelpCircle, Plus, Search, Edit2, Trash2, CheckCircle2, ChevronDown, 
-  ChevronUp, Sparkles, Tag, Layers, RefreshCw
-} from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { HelpCircle, Plus, Search, Pencil, Trash2, ChevronDown, Loader2 } from 'lucide-react';
 import API from '../../api/axiosInstance';
+import { STORE_TOPICS, publishStoreChange } from '../../lib/storeSync';
+import {
+  PageHeader, PrimaryButton, SecondaryButton, IconButton, Badge, ErrorBanner,
+  TabBar, TableCard, LoadingRow, EmptyRow, Pagination, Modal, Field,
+  inputClass, controlBase
+} from '../../components/admin/ui';
+
+/* ═══════════════════════════════════════════════════════════════════
+   FAQS
+   The questions the FAQ page and the product-page accordion both read.
+   Rows expand in place to show the answer, so checking the wording of
+   something doesn't mean opening an editor.
+═══════════════════════════════════════════════════════════════════ */
+const PAGE_SIZE = 10;
+
+const CATEGORIES = [
+  'Ozone Wash & Purity',
+  'Delivery & Packaging',
+  'A2 Ghee & Staples',
+  'Orders & Payments',
+  'B2B & Commercial Supply'
+];
 
 const INITIAL_FAQS = [
   {
@@ -48,320 +67,298 @@ const INITIAL_FAQS = [
   }
 ];
 
-const CATEGORIES = ['All', 'Ozone Wash & Purity', 'Delivery & Packaging', 'A2 Ghee & Staples', 'Orders & Payments', 'B2B & Commercial Supply'];
+const blankForm = () => ({
+  category: CATEGORIES[0],
+  question: '',
+  answer: '',
+  status: 'Published'
+});
 
 const AdminFAQs = () => {
   const [faqs, setFaqs] = useState(INITIAL_FAQS);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [showModal, setShowModal] = useState(false);
-  const [editingFaq, setEditingFaq] = useState(null);
-  const [expandedId, setExpandedId] = useState('faq-1');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [tab, setTab] = useState('All');
+  const [search, setSearch] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [expanded, setExpanded] = useState(null);
+  const [page, setPage] = useState(1);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(blankForm());
+  const [saving, setSaving] = useState(false);
 
-  const [formData, setFormData] = useState({
-    category: 'Ozone Wash & Purity',
-    question: '',
-    answer: '',
-    status: 'Published'
-  });
+  const idOf = (faq) => faq._id || faq.id;
 
-  const fetchFaqs = async () => {
+  const load = async () => {
     try {
-      setLoading(true);
       const { data } = await API.get('/admin/faqs');
-      if (data.success && data.faqs && data.faqs.length > 0) {
-        setFaqs(data.faqs);
-      }
+      if (data.success && data.faqs?.length > 0) setFaqs(data.faqs);
+      setError('');
     } catch (e) {
-      console.warn('FAQ fetch fallback', e);
+      // The seeded questions are what the FAQ page falls back to anyway.
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchFaqs();
-  }, []);
+  useEffect(() => { load(); }, []);
+  useEffect(() => { setPage(1); }, [tab, search]);
 
-  const handleOpenModal = (faq = null) => {
-    if (faq) {
-      setEditingFaq(faq);
-      setFormData({
-        category: faq.category,
-        question: faq.question,
-        answer: faq.answer,
-        status: faq.status
-      });
-    } else {
-      setEditingFaq(null);
-      setFormData({
-        category: 'Ozone Wash & Purity',
-        question: '',
-        answer: '',
-        status: 'Published'
-      });
-    }
-    setShowModal(true);
+  const open = (faq) => {
+    setEditing(faq || 'new');
+    setForm(faq ? { ...blankForm(), ...faq } : blankForm());
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const save = async () => {
+    if (!form.question.trim() || !form.answer.trim()) {
+      setError('A question needs both a question and an answer.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+
     try {
-      if (editingFaq) {
-        const { data } = await API.put(`/admin/faqs/${editingFaq._id || editingFaq.id}`, formData);
-        if (data.success && data.faq) {
-          setFaqs(faqs.map(f => (f._id === editingFaq._id || f.id === editingFaq.id) ? data.faq : f));
-        } else {
-          setFaqs(faqs.map(f => (f._id === editingFaq._id || f.id === editingFaq.id) ? { ...f, ...formData } : f));
-        }
-      } else {
-        const payload = {
-          ...formData,
-          order: faqs.length + 1
-        };
+      if (editing === 'new') {
+        const payload = { ...form, order: faqs.length + 1 };
         const { data } = await API.post('/admin/faqs', payload);
-        if (data.success && data.faq) {
-          setFaqs([data.faq, ...faqs]);
-        } else {
-          setFaqs([{ _id: `faq-${Date.now()}`, ...payload }, ...faqs]);
-        }
-      }
-    } catch (err) {
-      if (editingFaq) {
-        setFaqs(faqs.map(f => (f._id === editingFaq._id || f.id === editingFaq.id) ? { ...f, ...formData } : f));
+        setFaqs([data?.faq || { _id: `faq-${Date.now()}`, ...payload }, ...faqs]);
       } else {
-        const created = {
-          _id: `faq-${Date.now()}`,
-          ...formData,
-          order: faqs.length + 1
-        };
-        setFaqs([created, ...faqs]);
+        const { data } = await API.put(`/admin/faqs/${idOf(editing)}`, form);
+        setFaqs(faqs.map((f) => (idOf(f) === idOf(editing) ? (data?.faq || { ...f, ...form }) : f)));
       }
-    }
-    setShowModal(false);
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this FAQ?')) {
-      try {
-        await API.delete(`/admin/faqs/${id}`);
-        setFaqs(faqs.filter(f => f._id !== id && f.id !== id));
-      } catch (e) {
-        setFaqs(faqs.filter(f => f._id !== id && f.id !== id));
-      }
+      // The FAQ page and the product-page accordion both read this.
+      publishStoreChange(STORE_TOPICS.FAQS);
+      setEditing(null);
+    } catch (e) {
+      setError(e.response?.data?.message || 'Could not save that question.');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const filteredFaqs = faqs.filter(faq => {
-    const matchCat = selectedCategory === 'All' || faq.category === selectedCategory;
-    const matchSearch = faq.question.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        faq.answer.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchCat && matchSearch;
-  });
+  const remove = async (faq) => {
+    if (!window.confirm('Delete this question?')) return;
+    const previous = faqs;
+    setFaqs(faqs.filter((f) => idOf(f) !== idOf(faq)));
+    try {
+      await API.delete(`/admin/faqs/${idOf(faq)}`);
+      publishStoreChange(STORE_TOPICS.FAQS);
+    } catch (e) {
+      setFaqs(previous);
+      setError(e.response?.data?.message || 'Could not delete that question.');
+    }
+  };
+
+  const toggleStatus = async (faq) => {
+    const status = faq.status === 'Published' ? 'Draft' : 'Published';
+    const previous = faqs;
+    setFaqs(faqs.map((f) => (idOf(f) === idOf(faq) ? { ...f, status } : f)));
+    try {
+      await API.put(`/admin/faqs/${idOf(faq)}`, { status });
+      publishStoreChange(STORE_TOPICS.FAQS);
+    } catch (e) {
+      setFaqs(previous);
+      setError(e.response?.data?.message || 'Could not change visibility.');
+    }
+  };
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return faqs
+      .filter((f) => tab === 'All' || f.category === tab)
+      .filter((f) =>
+        !q || [f.question, f.answer, f.category].some((v) => String(v || '').toLowerCase().includes(q))
+      );
+  }, [faqs, tab, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div className="space-y-6 font-sans">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-5">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white font-display">
-            Frequently Asked Questions (FAQs)
-          </h1>
-          <p className="text-xs text-neutral-500 mt-1">
-            Manage customer FAQ knowledge base, categorize answers, and synchronize responses across product pages.
-          </p>
+    <div className="space-y-4 font-sans text-[#1a1a1a] dark:text-[#e3e3e3]">
+      <PageHeader icon={HelpCircle} title="FAQs" count={faqs.length}>
+        <PrimaryButton onClick={() => open(null)}>
+          <Plus className="h-3.5 w-3.5" />
+          Add question
+        </PrimaryButton>
+      </PageHeader>
+
+      <ErrorBanner message={error} onDismiss={() => setError('')} />
+
+      <TableCard>
+        <TabBar tabs={['All', ...CATEGORIES]} active={tab} onChange={setTab}>
+          {showSearch ? (
+            <input
+              autoFocus
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onBlur={() => !search && setShowSearch(false)}
+              placeholder="Search questions"
+              className={`${controlBase} w-48 py-1`}
+            />
+          ) : (
+            <IconButton onClick={() => setShowSearch(true)} title="Search">
+              <Search className="h-3.5 w-3.5" />
+            </IconButton>
+          )}
+        </TabBar>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-[#e1e1e1] dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-semibold">
+                <th className="py-2.5 px-4 w-8" />
+                <th className="py-2.5 px-3">Question</th>
+                <th className="py-2.5 px-3">Category</th>
+                <th className="py-2.5 px-3">Visibility</th>
+                <th className="py-2.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#e1e1e1] dark:divide-neutral-800">
+              {loading && <LoadingRow colSpan={5} label="Loading questions…" />}
+
+              {!loading && rows.length === 0 && (
+                <EmptyRow
+                  colSpan={5}
+                  icon={HelpCircle}
+                  title={search || tab !== 'All' ? 'No questions match those filters' : 'No questions yet'}
+                  hint="Questions added here appear on the FAQ page and the product accordion."
+                  action={
+                    !search && tab === 'All' && (
+                      <PrimaryButton onClick={() => open(null)}>
+                        <Plus className="h-3.5 w-3.5" />
+                        Add question
+                      </PrimaryButton>
+                    )
+                  }
+                />
+              )}
+
+              {!loading && rows.map((faq) => {
+                const id = idOf(faq);
+                const isOpen = expanded === id;
+                return (
+                  <React.Fragment key={id}>
+                    <tr
+                      onClick={() => setExpanded(isOpen ? null : id)}
+                      className="cursor-pointer hover:bg-[#f7f7f7] dark:hover:bg-neutral-800/50 transition-colors"
+                    >
+                      <td className="py-3 px-4">
+                        <ChevronDown
+                          className={`h-3.5 w-3.5 text-neutral-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                        />
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-[#1a1a1a] dark:text-white max-w-[460px]">
+                        <span className="line-clamp-2">{faq.question}</span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <Badge tone="info">{faq.category}</Badge>
+                      </td>
+                      <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                        <Badge
+                          tone={faq.status === 'Published' ? 'success' : 'neutral'}
+                          onClick={() => toggleStatus(faq)}
+                          title={faq.status === 'Published' ? 'Hide from the storefront' : 'Show on the storefront'}
+                        >
+                          {faq.status === 'Published' ? 'Visible' : 'Hidden'}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <IconButton onClick={() => open(faq)} title="Edit"><Pencil className="h-3.5 w-3.5" /></IconButton>
+                          <IconButton onClick={() => remove(faq)} title="Delete" danger><Trash2 className="h-3.5 w-3.5" /></IconButton>
+                        </div>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="bg-[#fbfbfa] dark:bg-[#161616]">
+                        <td />
+                        <td colSpan={4} className="py-3 pr-4 text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                          {faq.answer}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
 
-        <button
-          onClick={() => handleOpenModal()}
-          className="px-4 py-2.5 rounded-xl bg-[#2d472c] hover:bg-[#20341f] text-white text-xs font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={filtered.length}
+          pageSize={PAGE_SIZE}
+          onChange={setPage}
+          unit="questions"
+        />
+      </TableCard>
+
+      {editing && (
+        <Modal
+          title={editing === 'new' ? 'Add question' : 'Edit question'}
+          onClose={() => setEditing(null)}
+          footer={
+            <>
+              <SecondaryButton onClick={() => setEditing(null)} disabled={saving}>Cancel</SecondaryButton>
+              <PrimaryButton onClick={save} disabled={saving || !form.question.trim() || !form.answer.trim()}>
+                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {saving ? 'Saving…' : 'Save'}
+              </PrimaryButton>
+            </>
+          }
         >
-          <Plus className="h-4 w-4" />
-          <span>Add New FAQ</span>
-        </button>
-      </div>
+          <div className="space-y-3">
+            <Field label="Category">
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                className={inputClass}
+              >
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Field>
 
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="h-4 w-4 absolute left-3.5 top-3 text-neutral-400" />
-          <input
-            type="text"
-            placeholder="Search questions or answers..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl pl-10 pr-4 py-2 text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-[#2d472c]"
-          />
-        </div>
+            <Field label="Question" required>
+              <input
+                type="text"
+                autoFocus
+                value={form.question}
+                onChange={(e) => setForm({ ...form, question: e.target.value })}
+                placeholder="What do customers ask?"
+                className={inputClass}
+              />
+            </Field>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
-                selectedCategory === cat
-                  ? 'bg-[#2d472c] text-white shadow-xs'
-                  : 'bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50'
-              }`}
+            <Field
+              label="Answer"
+              required
+              counter={<span className="text-[11px] text-neutral-500">{form.answer.length} characters</span>}
             >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
+              <textarea
+                rows={6}
+                value={form.answer}
+                onChange={(e) => setForm({ ...form, answer: e.target.value })}
+                placeholder="The answer shown on the storefront"
+                className={inputClass}
+              />
+            </Field>
 
-      {/* FAQs Accordion Cards */}
-      <div className="space-y-3">
-        {filteredFaqs.length === 0 ? (
-          <div className="p-12 text-center bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 text-neutral-400 space-y-2">
-            <HelpCircle className="h-8 w-8 mx-auto text-neutral-300" />
-            <p className="text-sm font-bold text-neutral-700 dark:text-neutral-200">No FAQs match your search criteria</p>
-            <p className="text-xs">Try adjusting your category filter or search query</p>
-          </div>
-        ) : (
-          filteredFaqs.map((faq) => {
-            const faqId = faq._id || faq.id;
-            const isExpanded = expandedId === faqId;
-            return (
-              <div
-                key={faqId}
-                className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xs overflow-hidden transition-all duration-200"
+            <Field label="Visibility">
+              <select
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
+                className={inputClass}
               >
-                <div 
-                  onClick={() => setExpandedId(isExpanded ? null : faqId)}
-                  className="p-5 flex items-center justify-between gap-4 cursor-pointer hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 select-none"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
-                        {faq.category}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                        faq.status === 'Published' ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {faq.status}
-                      </span>
-                    </div>
-                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white font-display">
-                      {faq.question}
-                    </h3>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenModal(faq);
-                      }}
-                      className="p-1.5 rounded-lg text-neutral-400 hover:text-[#2d472c] hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                      title="Edit FAQ"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(faqId);
-                      }}
-                      className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors"
-                      title="Delete FAQ"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                    <div className="p-1 text-neutral-400">
-                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </div>
-                  </div>
-                </div>
-
-                {isExpanded && (
-                  <div className="px-5 pb-5 pt-1 text-xs sm:text-[13px] text-neutral-600 dark:text-neutral-300 border-t border-neutral-100 dark:border-neutral-800 leading-relaxed bg-neutral-50/40 dark:bg-neutral-900/60">
-                    <p>{faq.answer}</p>
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Create / Edit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-scaleUp">
-            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
-              <h3 className="text-lg font-bold text-neutral-900 dark:text-white font-display">
-                {editingFaq ? 'Edit FAQ Item' : 'Add New FAQ Item'}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">Category</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full bg-[#faf9f5] dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-xl px-3 py-2 text-neutral-900 dark:text-white focus:outline-none focus:border-[#2d472c]"
-                >
-                  {CATEGORIES.filter(c => c !== 'All').map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">Question *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. How does aqueous ozone eliminate pesticides?"
-                  value={formData.question}
-                  onChange={(e) => setFormData({ ...formData, question: e.target.value })}
-                  className="w-full bg-[#faf9f5] dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-neutral-900 dark:text-white focus:outline-none focus:border-[#2d472c]"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">Answer Narrative *</label>
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="Detailed scientific or operational answer for customers..."
-                  value={formData.answer}
-                  onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
-                  className="w-full bg-[#faf9f5] dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-2.5 text-neutral-900 dark:text-white focus:outline-none focus:border-[#2d472c]"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 font-bold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#2d472c] hover:bg-[#20341f] text-white font-bold shadow-md"
-                >
-                  {editingFaq ? 'Save Changes' : 'Create FAQ'}
-                </button>
-              </div>
-            </form>
+                <option value="Published">Visible</option>
+                <option value="Draft">Hidden</option>
+              </select>
+            </Field>
           </div>
-        </div>
+        </Modal>
       )}
-
     </div>
   );
 };

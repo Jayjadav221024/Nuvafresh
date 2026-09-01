@@ -1,12 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Star, Plus, Trash2, Edit2, CheckCircle2, Eye, EyeOff, MessageSquare, 
-  MapPin, Quote, Sparkles, X, User, Image, AlertCircle
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Quote, Plus, Trash2, Pencil, Star, Search, User, Loader2, MessageSquare
 } from 'lucide-react';
 import API from '../../api/axiosInstance';
+import { STORE_TOPICS, publishStoreChange } from '../../lib/storeSync';
 import { TESTIMONIAL_AMIT_BASE64 } from '../../assets/testimonialAmitBase64';
 import { TESTIMONIAL_MINAL_BASE64 } from '../../assets/testimonialMinalBase64';
 import { TESTIMONIAL_SHIRALI_BASE64 } from '../../assets/testimonialShiraliBase64';
+import {
+  PageHeader, PrimaryButton, SecondaryButton, IconButton, Badge, ErrorBanner,
+  TabBar, TableCard, LoadingRow, EmptyRow, Pagination, Modal, Field,
+  inputClass, controlBase
+} from '../../components/admin/ui';
+
+/* ═══════════════════════════════════════════════════════════════════
+   TESTIMONIALS
+   The customer quotes the homepage strip renders. Same table chrome as
+   the rest of the Content section: visibility as a live badge, the row
+   opens the editor, the storefront hears about every save.
+═══════════════════════════════════════════════════════════════════ */
+const PAGE_SIZE = 10;
 
 const DEFAULT_TESTIMONIALS = [
   {
@@ -51,368 +64,340 @@ const DEFAULT_TESTIMONIALS = [
   }
 ];
 
+const blankForm = () => ({
+  author: '',
+  city: '',
+  quote: '',
+  rating: 5,
+  avatar: '',
+  status: 'Published'
+});
+
+const Stars = ({ value }) => (
+  <span className="flex items-center gap-0.5" title={`${value} out of 5`}>
+    {[1, 2, 3, 4, 5].map((n) => (
+      <Star
+        key={n}
+        className={`h-3 w-3 ${
+          n <= value ? 'fill-amber-400 text-amber-400' : 'text-neutral-300 dark:text-neutral-600'
+        }`}
+      />
+    ))}
+  </span>
+);
+
 const AdminTestimonials = () => {
   const [testimonials, setTestimonials] = useState(DEFAULT_TESTIMONIALS);
-  const [loading, setLoading] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [filterStatus, setFilterStatus] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [tab, setTab] = useState('All');
+  const [search, setSearch] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [page, setPage] = useState(1);
+  const [editing, setEditing] = useState(null);   // the row being edited, or 'new'
+  const [form, setForm] = useState(blankForm());
+  const [saving, setSaving] = useState(false);
 
-  const [formData, setFormData] = useState({
-    author: '',
-    city: '',
-    quote: '',
-    rating: 5,
-    avatar: '',
-    status: 'Published'
-  });
-
-  const fetchTestimonials = async () => {
+  const load = async () => {
     try {
-      setLoading(true);
       const { data } = await API.get('/admin/testimonials');
-      if (data.success && data.testimonials && data.testimonials.length > 0) {
-        setTestimonials(data.testimonials);
-      }
+      if (data.success && data.testimonials?.length > 0) setTestimonials(data.testimonials);
+      setError('');
     } catch (e) {
-      console.warn('Using local testimonial state fallback', e);
+      // The seeded set is what the homepage shows anyway.
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchTestimonials();
-  }, []);
+  useEffect(() => { load(); }, []);
+  useEffect(() => { setPage(1); }, [tab, search]);
 
-  const handleOpenModal = (item = null) => {
-    if (item) {
-      setEditingItem(item);
-      setFormData({
-        author: item.author || '',
-        city: item.city || '',
-        quote: item.quote || '',
-        rating: item.rating || 5,
-        avatar: item.avatar || '',
-        status: item.status || 'Published'
-      });
-    } else {
-      setEditingItem(null);
-      setFormData({
-        author: '',
-        city: '',
-        quote: '',
-        rating: 5,
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop&q=80',
-        status: 'Published'
-      });
-    }
-    setIsModalOpen(true);
+  const open = (item) => {
+    setEditing(item || 'new');
+    setForm(item ? { ...blankForm(), ...item } : blankForm());
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    if (!formData.author || !formData.quote) return;
-
-    if (editingItem) {
-      try {
-        await API.put(`/admin/testimonials/${editingItem._id}`, formData);
-      } catch (err) {}
-      setTestimonials(testimonials.map(t => t._id === editingItem._id ? { ...t, ...formData } : t));
-    } else {
-      const payload = {
-        _id: `t-${Date.now()}`,
-        ...formData
-      };
-      try {
-        const { data } = await API.post('/admin/testimonials', payload);
-        if (data.success && data.testimonial) {
-          setTestimonials([data.testimonial, ...testimonials]);
-        } else {
-          setTestimonials([payload, ...testimonials]);
-        }
-      } catch (err) {
-        setTestimonials([payload, ...testimonials]);
-      }
+  const save = async () => {
+    if (!form.author.trim() || !form.quote.trim()) {
+      setError('A testimonial needs an author and a quote.');
+      return;
     }
-    setIsModalOpen(false);
-  };
+    setSaving(true);
+    setError('');
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to remove this testimonial?')) {
-      try {
-        await API.delete(`/admin/testimonials/${id}`);
-      } catch (err) {}
-      setTestimonials(testimonials.filter(t => t._id !== id));
-    }
-  };
-
-  const handleToggleStatus = async (item) => {
-    const newStatus = item.status === 'Published' ? 'Draft' : 'Published';
+    const isNew = editing === 'new';
     try {
-      await API.put(`/admin/testimonials/${item._id}`, { status: newStatus });
-    } catch (err) {}
-    setTestimonials(testimonials.map(t => t._id === item._id ? { ...t, status: newStatus } : t));
+      if (isNew) {
+        const payload = { _id: `t-${Date.now()}`, ...form };
+        const { data } = await API.post('/admin/testimonials', payload);
+        setTestimonials([data?.testimonial || payload, ...testimonials]);
+      } else {
+        await API.put(`/admin/testimonials/${editing._id}`, form);
+        setTestimonials(testimonials.map((t) => (t._id === editing._id ? { ...t, ...form } : t)));
+      }
+      publishStoreChange(STORE_TOPICS.TESTIMONIALS);
+      setEditing(null);
+    } catch (e) {
+      setError(e.response?.data?.message || 'Could not save that testimonial.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const filtered = filterStatus === 'All' 
-    ? testimonials 
-    : testimonials.filter(t => t.status === filterStatus);
+  const remove = async (item) => {
+    if (!window.confirm(`Remove the testimonial from ${item.author}?`)) return;
+    const previous = testimonials;
+    setTestimonials(testimonials.filter((t) => t._id !== item._id));
+    try {
+      await API.delete(`/admin/testimonials/${item._id}`);
+      publishStoreChange(STORE_TOPICS.TESTIMONIALS);
+    } catch (e) {
+      setTestimonials(previous);
+      setError(e.response?.data?.message || 'Could not remove that testimonial.');
+    }
+  };
+
+  const toggleStatus = async (item) => {
+    const status = item.status === 'Published' ? 'Draft' : 'Published';
+    const previous = testimonials;
+    setTestimonials(testimonials.map((t) => (t._id === item._id ? { ...t, status } : t)));
+    try {
+      await API.put(`/admin/testimonials/${item._id}`, { status });
+      // Publishing changes the homepage strip, so the shop refetches.
+      publishStoreChange(STORE_TOPICS.TESTIMONIALS);
+    } catch (e) {
+      setTestimonials(previous);
+      setError(e.response?.data?.message || 'Could not change visibility.');
+    }
+  };
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return testimonials
+      .filter((t) => tab === 'All' || t.status === tab)
+      .filter((t) =>
+        !q || [t.author, t.city, t.quote].some((v) => String(v || '').toLowerCase().includes(q))
+      );
+  }, [testimonials, tab, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div className="p-6 sm:p-8 space-y-8 font-sans max-w-7xl">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-5">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white font-display">
-            Customer Testimonials
-          </h1>
-          <p className="text-xs sm:text-sm text-neutral-500 mt-1">
-            Manage verified customer feedback and quotes displayed across the homepage and story pages.
-          </p>
-        </div>
+    <div className="space-y-4 font-sans text-[#1a1a1a] dark:text-[#e3e3e3]">
+      <PageHeader icon={Quote} title="Testimonials" count={testimonials.length}>
+        <PrimaryButton onClick={() => open(null)}>
+          <Plus className="h-3.5 w-3.5" />
+          Add testimonial
+        </PrimaryButton>
+      </PageHeader>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-1 rounded-xl">
-            {['All', 'Published', 'Draft'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setFilterStatus(tab)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  filterStatus === tab ? 'bg-[#2d472c] text-white shadow-sm' : 'text-neutral-600 dark:text-neutral-400 hover:text-black'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+      <ErrorBanner message={error} onDismiss={() => setError('')} />
 
-          <button
-            onClick={() => handleOpenModal()}
-            className="px-5 py-2.5 rounded-xl bg-[#2d472c] hover:bg-[#20341f] text-white text-xs font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95 shrink-0"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Add Testimonial</span>
-          </button>
-        </div>
-      </div>
+      <TableCard>
+        <TabBar tabs={['All', 'Published', 'Draft']} active={tab} onChange={setTab}>
+          {showSearch ? (
+            <input
+              autoFocus
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onBlur={() => !search && setShowSearch(false)}
+              placeholder="Search testimonials"
+              className={`${controlBase} w-48 py-1`}
+            />
+          ) : (
+            <IconButton onClick={() => setShowSearch(true)} title="Search">
+              <Search className="h-3.5 w-3.5" />
+            </IconButton>
+          )}
+        </TabBar>
 
-      {/* Grid of Testimonial Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered.map((item) => (
-          <div 
-            key={item._id}
-            className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between relative group"
-          >
-            {/* Top Row: Avatar + Name + Status */}
-            <div>
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <div className="flex items-center gap-3">
-                  {item.avatar ? (
-                    <img 
-                      src={item.avatar} 
-                      alt={item.author} 
-                      className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500/20"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold text-sm">
-                      {item.author?.[0] || 'U'}
-                    </div>
-                  )}
-                  <div>
-                    <h3 className="font-bold text-neutral-900 dark:text-white text-sm">
-                      {item.author}
-                    </h3>
-                    <div className="flex items-center gap-1 text-[11px] text-neutral-400">
-                      <MapPin className="h-3 w-3" />
-                      <span>{item.city || 'Gujarat'}</span>
-                    </div>
-                  </div>
-                </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-[#e1e1e1] dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-semibold">
+                <th className="py-2.5 px-4">Customer</th>
+                <th className="py-2.5 px-3">Quote</th>
+                <th className="py-2.5 px-3">Rating</th>
+                <th className="py-2.5 px-3">Visibility</th>
+                <th className="py-2.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#e1e1e1] dark:divide-neutral-800">
+              {loading && <LoadingRow colSpan={5} label="Loading testimonials…" />}
 
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                  item.status === 'Published' 
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400' 
-                    : 'bg-neutral-100 text-neutral-500 border-neutral-200'
-                }`}>
-                  {item.status}
-                </span>
-              </div>
-
-              {/* Star Rating */}
-              <div className="flex items-center gap-1 mb-3">
-                {[...Array(item.rating || 5)].map((_, i) => (
-                  <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                ))}
-              </div>
-
-              {/* Quote Body */}
-              <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed italic line-clamp-4">
-                "{item.quote}"
-              </p>
-            </div>
-
-            {/* Bottom Actions */}
-            <div className="mt-6 pt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-              <button
-                onClick={() => handleToggleStatus(item)}
-                className="text-[11px] font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-1.5"
-              >
-                {item.status === 'Published' ? (
-                  <>
-                    <EyeOff className="h-3.5 w-3.5 text-neutral-400" />
-                    <span>Hide</span>
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>Publish</span>
-                  </>
-                )}
-              </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleOpenModal(item)}
-                  className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black transition-colors"
-                  title="Edit"
-                >
-                  <Edit2 className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={() => handleDelete(item._id)}
-                  className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
-                  title="Delete"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Create / Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative animate-fadeIn">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-neutral-100 dark:border-neutral-800">
-              <h3 className="text-lg font-bold text-neutral-900 dark:text-white font-display">
-                {editingItem ? 'Edit Testimonial' : 'Add New Customer Testimonial'}
-              </h3>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-black"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    Customer Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.author}
-                    onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                    placeholder="e.g. Minal Kapasi"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-xs bg-neutral-50 dark:bg-neutral-800"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    City / Region
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="e.g. Vadodara"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-xs bg-neutral-50 dark:bg-neutral-800"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                  Customer Quote Feedback *
-                </label>
-                <textarea
-                  rows={4}
-                  required
-                  value={formData.quote}
-                  onChange={(e) => setFormData({ ...formData, quote: e.target.value })}
-                  placeholder="Paste authentic customer quote here..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-xs bg-neutral-50 dark:bg-neutral-800 leading-relaxed"
+              {!loading && rows.length === 0 && (
+                <EmptyRow
+                  colSpan={5}
+                  icon={MessageSquare}
+                  title={search || tab !== 'All' ? 'No testimonials match those filters' : 'No testimonials yet'}
+                  hint="Quotes added here appear in the homepage testimonials strip."
+                  action={
+                    !search && tab === 'All' && (
+                      <PrimaryButton onClick={() => open(null)}>
+                        <Plus className="h-3.5 w-3.5" />
+                        Add testimonial
+                      </PrimaryButton>
+                    )
+                  }
                 />
-              </div>
+              )}
 
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                  Avatar Photo URL
-                </label>
+              {!loading && rows.map((t) => (
+                <tr
+                  key={t._id}
+                  onClick={() => open(t)}
+                  className="cursor-pointer hover:bg-[#f7f7f7] dark:hover:bg-neutral-800/50 transition-colors"
+                >
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2.5">
+                      <span className="h-8 w-8 rounded-full overflow-hidden bg-neutral-200 dark:bg-neutral-700 shrink-0 flex items-center justify-center">
+                        {t.avatar ? (
+                          <img src={t.avatar} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <User className="h-3.5 w-3.5 text-neutral-500" />
+                        )}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block font-semibold text-[#1a1a1a] dark:text-white truncate">
+                          {t.author}
+                        </span>
+                        <span className="block text-[11px] text-neutral-500 truncate">{t.city || '—'}</span>
+                      </span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400 max-w-[420px]">
+                    <span className="line-clamp-2">{t.quote}</span>
+                  </td>
+                  <td className="py-3 px-3"><Stars value={Number(t.rating) || 0} /></td>
+                  <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                    <Badge
+                      tone={t.status === 'Published' ? 'success' : 'neutral'}
+                      onClick={() => toggleStatus(t)}
+                      title={t.status === 'Published' ? 'Hide from the homepage' : 'Show on the homepage'}
+                    >
+                      {t.status === 'Published' ? 'Visible' : 'Hidden'}
+                    </Badge>
+                  </td>
+                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      <IconButton onClick={() => open(t)} title="Edit"><Pencil className="h-3.5 w-3.5" /></IconButton>
+                      <IconButton onClick={() => remove(t)} title="Remove" danger><Trash2 className="h-3.5 w-3.5" /></IconButton>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={filtered.length}
+          pageSize={PAGE_SIZE}
+          onChange={setPage}
+          unit="testimonials"
+        />
+      </TableCard>
+
+      {editing && (
+        <Modal
+          title={editing === 'new' ? 'Add testimonial' : `Edit ${editing.author}`}
+          onClose={() => setEditing(null)}
+          footer={
+            <>
+              <SecondaryButton onClick={() => setEditing(null)} disabled={saving}>Cancel</SecondaryButton>
+              <PrimaryButton onClick={save} disabled={saving || !form.author.trim() || !form.quote.trim()}>
+                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {saving ? 'Saving…' : 'Save'}
+              </PrimaryButton>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Author" required>
                 <input
                   type="text"
-                  value={formData.avatar}
-                  onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-                  placeholder="https://... image URL"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-xs bg-neutral-50 dark:bg-neutral-800"
+                  autoFocus
+                  value={form.author}
+                  onChange={(e) => setForm({ ...form, author: e.target.value })}
+                  placeholder="Customer name"
+                  className={inputClass}
                 />
-              </div>
+              </Field>
+              <Field label="City">
+                <input
+                  type="text"
+                  value={form.city}
+                  onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  placeholder="Vadodara"
+                  className={inputClass}
+                />
+              </Field>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    Rating Stars (1-5)
-                  </label>
-                  <select
-                    value={formData.rating}
-                    onChange={(e) => setFormData({ ...formData, rating: Number(e.target.value) })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-xs bg-neutral-50 dark:bg-neutral-800"
-                  >
-                    <option value={5}>5 Stars ★★★★★</option>
-                    <option value={4}>4 Stars ★★★★☆</option>
-                    <option value={3}>3 Stars ★★★☆☆</option>
-                  </select>
-                </div>
+            <Field
+              label="Quote"
+              required
+              counter={<span className="text-[11px] text-neutral-500">{form.quote.length} characters</span>}
+            >
+              <textarea
+                rows={5}
+                value={form.quote}
+                onChange={(e) => setForm({ ...form, quote: e.target.value })}
+                placeholder="What the customer said"
+                className={inputClass}
+              />
+            </Field>
 
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-xs bg-neutral-50 dark:bg-neutral-800"
-                  >
-                    <option value="Published">Published (Live on Website)</option>
-                    <option value="Draft">Draft (Hidden)</option>
-                  </select>
-                </div>
-              </div>
+            <Field label="Avatar image URL" hint="Paste a link from Files, or leave blank for an initial.">
+              <input
+                type="text"
+                value={form.avatar}
+                onChange={(e) => setForm({ ...form, avatar: e.target.value })}
+                placeholder="https://…"
+                className={inputClass}
+              />
+            </Field>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 hover:bg-neutral-100"
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Rating">
+                <select
+                  value={form.rating}
+                  onChange={(e) => setForm({ ...form, rating: Number(e.target.value) })}
+                  className={inputClass}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-[#2d472c] hover:bg-[#20341f] text-white text-xs font-bold shadow-md transition-transform active:scale-95"
+                  {[5, 4, 3, 2, 1].map((n) => (
+                    <option key={n} value={n}>{n} star{n === 1 ? '' : 's'}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Visibility">
+                <select
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value })}
+                  className={inputClass}
                 >
-                  Save Testimonial
-                </button>
+                  <option value="Published">Visible</option>
+                  <option value="Draft">Hidden</option>
+                </select>
+              </Field>
+            </div>
+
+            {form.avatar && (
+              <div className="flex items-center gap-2.5 pt-1">
+                <span className="h-10 w-10 rounded-full overflow-hidden bg-neutral-200 dark:bg-neutral-700 shrink-0">
+                  <img src={form.avatar} alt="" className="h-full w-full object-cover" />
+                </span>
+                <span className="text-[11px] text-neutral-500">Preview</span>
               </div>
-            </form>
+            )}
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

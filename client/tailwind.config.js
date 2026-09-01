@@ -4,6 +4,11 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  /* The admin's theme toggle is the only thing that decides dark mode, and it
+     works by putting `.dark` on <html>. Left on the default ('media') every
+     `dark:` utility in the admin followed the operating system instead, so an
+     OS-dark machine painted dark cards under light text. */
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {

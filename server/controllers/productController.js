@@ -37,13 +37,21 @@ if (MOCK_PRODUCTS.length === 0) {
   ];
 }
 
+/* Only `active` products belong on the storefront. Products imported before
+   the status field existed have no value at all, and `$nin` matches those too,
+   so an un-migrated catalogue keeps selling. The admin opts out with
+   `?includeDrafts=true` to see its full catalogue. */
+const PUBLIC_STATUS_FILTER = { status: { $nin: ['draft', 'archived'] } };
+const isPubliclyVisible = (product) => !['draft', 'archived'].includes(product.status);
+
 export const getProducts = async (req, res) => {
   try {
-    const { category, search, ozoneOnly, bestseller, page = 1 } = req.query;
+    const { category, search, ozoneOnly, bestseller, includeDrafts, page = 1 } = req.query;
     const limitNum = req.query.limit === 'all' || !req.query.limit ? 1000 : Number(req.query.limit);
+    const showAll = includeDrafts === 'true';
 
     try {
-      let query = {};
+      let query = showAll ? {} : { ...PUBLIC_STATUS_FILTER };
       if (category && category !== 'All') query.category = category;
       if (ozoneOnly === 'true') query.isOzoneWashed = true;
       if (bestseller === 'true') query.isBestseller = true;
@@ -69,7 +77,7 @@ export const getProducts = async (req, res) => {
       // fallback to mock
     }
 
-    let filtered = [...MOCK_PRODUCTS];
+    let filtered = showAll ? [...MOCK_PRODUCTS] : MOCK_PRODUCTS.filter(isPubliclyVisible);
     if (category && category !== 'All') {
       filtered = filtered.filter(p => p.category.toLowerCase().includes(category.toLowerCase()));
     }
@@ -91,15 +99,32 @@ export const getProducts = async (req, res) => {
 
 export const getProductById = async (req, res) => {
   try {
+    const { id } = req.params;
+    const showAll = req.query.includeDrafts === 'true';
+
+    let product = null;
     try {
-      const product = await Product.findById(req.params.id).lean();
-      if (product) return res.json({ success: true, product });
+      // Accept an id or a handle, so /products/<slug> resolves the same way.
+      product = /^[0-9a-fA-F]{24}$/.test(id)
+        ? await Product.findById(id).lean()
+        : await Product.findOne({ slug: id }).lean();
     } catch (e) {}
 
-    const found = MOCK_PRODUCTS.find(p => p._id === req.params.id || p.slug === req.params.id);
-    if (found) return res.json({ success: true, product: found });
+    if (!product) {
+      product = MOCK_PRODUCTS.find(p => p._id === id || p.slug === id) || null;
+    }
 
-    res.status(404).json({ success: false, message: 'Product not found' });
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    // An unpublished product is invisible to shoppers but must still open in
+    // the admin editor.
+    if (!showAll && !isPubliclyVisible(product)) {
+      return res.status(404).json({ success: false, message: 'This product is not available' });
+    }
+
+    res.json({ success: true, product });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -1,10 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Youtube, Linkedin } from 'lucide-react';
 import { useContent } from '../../context/ContentContext';
+import API from '../../api/axiosInstance';
+import { STORE_TOPICS, subscribeToStoreChanges } from '../../lib/storeSync';
+
+/* What the PAGES column shows if the menu can't be read — the same links,
+   so a network failure degrades to the previous behaviour rather than an
+   empty column. */
+const FALLBACK_PAGE_LINKS = [
+  { title: 'Our Story', url: '/our-story' },
+  { title: 'B2B & Commercial', url: '/b2b' },
+  { title: 'CSR Initiatives', url: '/csr-initiatives' },
+  { title: 'Ozone Shield', url: '/ozone-shield' },
+  { title: 'Frequently Asked Questions (FAQs)', url: '/faqs' },
+  { title: 'Blogs & Research', url: '/blogs' },
+  { title: 'Contact Us', url: '/contact-us' },
+  { title: 'Track Order', url: '/track-order' }
+];
 
 const Footer = () => {
   const { getContent } = useContent();
+
+  const [pageLinks, setPageLinks] = useState(FALLBACK_PAGE_LINKS);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await API.get('/content/menus/footer-pages');
+        const items = (data.menu?.items || []).filter((i) => i.title);
+        if (items.length > 0) setPageLinks(items);
+      } catch (e) {
+        // Keep the built-in links.
+      }
+    };
+    load();
+    // Saving the menu in the admin updates the open storefront tab.
+    return subscribeToStoreChanges(STORE_TOPICS.CONTENT, load);
+  }, []);
   const officeAddress = getContent('footer.contact', 'officeAddress', '4th floor, Pancham Icon, Vasna Rd, Kalyan Nagar, Diwalipura, Vadodara, Gujarat 390007');
   const supportPhone = getContent('footer.contact', 'supportPhone', '+91 92277 25359');
   const supportEmail = getContent('footer.contact', 'supportEmail', 'support@thenuva.com');
@@ -135,47 +168,20 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Column 3: PAGES */}
+          {/* Column 3: PAGES — driven by the "footer-pages" menu in the admin,
+              falling back to these links if the menu can't be read. */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold tracking-wider text-white uppercase font-display">
               PAGES
             </h3>
             <ul className="space-y-2.5 text-xs sm:text-[13px] text-[#cddccb]">
-              <li>
-                <Link to="/our-story" className="hover:text-white transition-colors">
-                  Our Story
-                </Link>
-              </li>
-              <li>
-                <Link to="/b2b" className="hover:text-white transition-colors">
-                  B2B & Commercial
-                </Link>
-              </li>
-              <li>
-                <Link to="/csr-initiatives" className="hover:text-white transition-colors">
-                  CSR Initiatives
-                </Link>
-              </li>
-              <li>
-                <Link to="/ozone-shield" className="hover:text-white transition-colors">
-                  Ozone Shield
-                </Link>
-              </li>
-              <li>
-                <Link to="/faqs" className="hover:text-white transition-colors">
-                  Frequently Asked Questions (FAQs)
-                </Link>
-              </li>
-              <li>
-                <Link to="/blogs" className="hover:text-white transition-colors">
-                  Blogs & Research
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact-us" className="hover:text-white transition-colors">
-                  Contact us
-                </Link>
-              </li>
+              {pageLinks.map((link) => (
+                <li key={link.url + link.title}>
+                  <Link to={link.url} className="hover:text-white transition-colors">
+                    {link.title}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 

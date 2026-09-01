@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { 
   Search, User as UserIcon, ShoppingBag, ChevronDown, ChevronUp, ChevronRight, Shield, LogOut,
@@ -8,57 +8,66 @@ import { useAuth } from '../../hooks/useAuth';
 import { useCart } from '../../hooks/useCart';
 import { useContent } from '../../context/ContentContext';
 import { NUVA_LOGO_BASE64 } from '../../assets/logoBase64';
+import API from '../../api/axiosInstance';
+import { STORE_TOPICS, subscribeToStoreChanges } from '../../lib/storeSync';
 
-const CATEGORIES_MENU = [
-  {
-    id: 'fresh-produce',
-    name: 'Fresh Produce',
-    hasSubmenu: true,
-    subcategories: [
-      { name: 'Fruits', path: '/shop?category=fruits' },
-      { name: 'Vegetables', path: '/shop?category=vegetables' }
-    ]
-  },
-  {
-    id: 'grains-staples',
-    name: 'Grains & Staples',
-    hasSubmenu: true,
-    subcategories: [
-      { name: 'Millets', path: '/shop?category=millets' },
-      { name: 'Rice', path: '/shop?category=rice' },
-      { name: 'Flours', path: '/shop?category=flours' }
-    ]
-  },
-  {
-    id: 'pulses-lentils',
-    name: 'Pulses & Lentils',
-    hasSubmenu: false,
-    path: '/shop?category=pulses'
-  },
-  {
-    id: 'spices-seasonings',
-    name: 'Spices & Seasonings',
-    hasSubmenu: false,
-    path: '/shop?category=spices'
-  },
-  {
-    id: 'oils-ghee',
-    name: 'Oils & Ghee',
-    hasSubmenu: false,
-    path: '/shop?category=ghee-oils'
-  },
-  {
-    id: 'healthy-sweeteners',
-    name: 'Healthy Sweeteners',
-    hasSubmenu: false,
-    path: '/shop?category=sweeteners'
-  }
+/* The menu is built from the categories the merchant actually maintains in
+   the admin, so adding, renaming or removing one changes the storefront nav.
+   These names are only the pre-fetch placeholder — they match the seeded
+   categories so the first paint is never empty. */
+const FALLBACK_CATEGORY_NAMES = [
+  'Fresh Produce',
+  'Grains & Staples',
+  'Pulses & Lentils',
+  'Spices & Seasonings',
+  'Oils & Ghee',
+  'Healthy Sweeteners'
 ];
+
+const SHOP_BY_COLLECTION = {
+  id: 'collections',
+  name: 'Shop by collection',
+  hasSubmenu: false,
+  path: '/collections'
+};
+
+/* A category link has to carry the category's exact name. The old menu linked
+   to invented slugs (`fruits`, `ghee-oils`) that matched no product, so every
+   one of these entries opened an empty Shop page. */
+const toMenuEntry = (name) => ({
+  id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+  name,
+  hasSubmenu: false,
+  path: `/shop?category=${encodeURIComponent(name)}`
+});
+
+const buildCategoriesMenu = (names) => [...names.map(toMenuEntry), SHOP_BY_COLLECTION];
 
 const Navbar = () => {
   const { user, logout, openAuthModal } = useAuth();
   const { itemCount, setIsDrawerOpen, cartBump } = useCart();
   const { getContent } = useContent();
+
+  const [categoriesMenu, setCategoriesMenu] = useState(() => buildCategoriesMenu(FALLBACK_CATEGORY_NAMES));
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const { data } = await API.get('/admin/categories/public');
+        const names = (data?.categories || [])
+          .filter((c) => c.status !== 'Archived' && c.status !== 'Draft')
+          .map((c) => c.name)
+          .filter(Boolean);
+
+        if (names.length > 0) setCategoriesMenu(buildCategoriesMenu(names));
+      } catch (e) {
+        // Keep the placeholder menu — the storefront must never lose its nav.
+      }
+    };
+
+    loadCategories();
+    return subscribeToStoreChanges(STORE_TOPICS.CATEGORIES, loadCategories);
+  }, []);
 
   const marqueeText = getContent('sitewide.announcement', 'marqueeText', '🚚 Free shipping on all Gujarat farm orders above ₹499 • Use code WELCOME10 for 10% OFF!');
   const customLogoImage = getContent('sitewide.header', 'logoImage', '');
@@ -211,7 +220,7 @@ const Navbar = () => {
                 
                 {/* Level 1 Categories */}
                 <div className="w-56 bg-white border border-neutral-200/90 shadow-xl py-3 divide-y divide-transparent">
-                  {CATEGORIES_MENU.map((cat) => {
+                  {categoriesMenu.map((cat) => {
                     const isActive = activeCategory === cat.id;
                     return (
                       <div
@@ -251,7 +260,7 @@ const Navbar = () => {
                 {/* Level 2 Sub-Categories Flyout */}
                 {activeCategory && (
                   <div className="w-48 bg-white border border-neutral-200/90 border-l-0 shadow-xl py-3 pl-6 pr-4 space-y-3 min-h-[140px] animate-fadeIn">
-                    {CATEGORIES_MENU.find((c) => c.id === activeCategory)?.subcategories?.map((sub) => (
+                    {categoriesMenu.find((c) => c.id === activeCategory)?.subcategories?.map((sub) => (
                       <Link
                         key={sub.name}
                         to={sub.path}
@@ -482,20 +491,18 @@ const Navbar = () => {
                   >
                     View All Products
                   </Link>
-                  {CATEGORIES_MENU.map((cat) => (
-                    <div key={cat.id} className="py-1">
-                      <span className="block px-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">{cat.name}</span>
-                      {cat.subcategories?.map((sub) => (
-                        <Link
-                          key={sub.name}
-                          to={sub.path}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block px-3 py-1.5 text-xs text-neutral-700 hover:text-[#2d472c]"
-                        >
-                          {sub.name}
-                        </Link>
-                      ))}
-                    </div>
+                  {/* Every entry is a link. Previously a category with no
+                      subcategories rendered as a plain label, which left most
+                      of the catalogue unreachable on mobile. */}
+                  {categoriesMenu.map((cat) => (
+                    <Link
+                      key={cat.id}
+                      to={cat.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-3 py-2 text-xs font-semibold text-neutral-700 hover:text-[#2d472c]"
+                    >
+                      {cat.name}
+                    </Link>
                   ))}
                 </div>
               )}

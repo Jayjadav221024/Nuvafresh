@@ -1,18 +1,45 @@
-import React, { useState } from 'react';
-import { MessageSquare, Mail, Phone, Calendar, CheckCircle2, Clock } from 'lucide-react';
-
-const SEED_INQUIRIES = [
-  { _id: 'inq-1', name: 'Dr. Sameer Joshi', email: 'dr.sameer@gmail.com', phone: '+91 98251 90890', message: 'Do you deliver cold-pressed oils and A2 ghee bulk orders to medical wellness centers in Ahmedabad?', status: 'Unread', createdAt: 'Today, 10:15 AM' },
-  { _id: 'inq-2', name: 'Meera Trivedi', email: 'meera.t@gmail.com', phone: '+91 94280 44556', message: 'Wanted to inquire about your ozone washing machinery for farm produce visit in Anand unit.', status: 'Replied', createdAt: 'Yesterday' },
-  { _id: 'inq-3', name: 'Rajesh Solanki', email: 'rajesh.organic@hotmail.com', phone: '+91 98790 11223', message: 'Interested in partnering as a certified regenerative farmer for Khapli wheat supply.', status: 'Read', createdAt: 'Aug 22, 2026' }
-];
+import React, { useState, useEffect } from 'react';
+import { MessageSquare, Loader2, AlertCircle, Inbox } from 'lucide-react';
+import API from '../../api/axiosInstance';
 
 const AdminInquiries = () => {
-  const [inquiries, setInquiries] = useState(SEED_INQUIRIES);
-  const [selectedInquiry, setSelectedInquiry] = useState(null);
+  const [inquiries, setInquiries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const toggleStatus = (id, newStatus) => {
+  const load = async () => {
+    try {
+      const { data } = await API.get('/admin/inquiries');
+      if (data.success) setInquiries(data.inquiries || []);
+      setError('');
+    } catch (e) {
+      setError(e?.response?.data?.message || 'Could not load inquiries.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  // Marking an inquiry replied has to persist, or the next person to open this
+  // screen sees an inbox that has forgotten every reply already sent.
+  const toggleStatus = async (id, newStatus) => {
+    const previous = inquiries;
     setInquiries(inquiries.map(i => i._id === id ? { ...i, status: newStatus } : i));
+
+    try {
+      await API.patch(`/admin/inquiries/${id}/status`, { status: newStatus });
+    } catch (e) {
+      setInquiries(previous);
+      setError(e?.response?.data?.message || 'Could not update that inquiry.');
+    }
+  };
+
+  const formatDate = (value) => {
+    if (!value) return '—';
+    return new Date(value).toLocaleString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
   };
 
   return (
@@ -30,6 +57,13 @@ const AdminInquiries = () => {
         </div>
       </div>
 
+      {error && (
+        <div className="flex items-start gap-2 px-4 py-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs font-semibold">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-px" />
+          <span>{error}</span>
+        </div>
+      )}
+
       {/* Inquiries Table */}
       <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -45,7 +79,28 @@ const AdminInquiries = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {inquiries.map((inq) => (
+              {loading && (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-neutral-500">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                    Loading inquiries…
+                  </td>
+                </tr>
+              )}
+
+              {!loading && inquiries.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-neutral-500">
+                    <Inbox className="h-6 w-6 mx-auto mb-2 text-neutral-300" />
+                    <p className="font-semibold text-neutral-700 dark:text-neutral-300">No inquiries yet</p>
+                    <p className="text-[11px] mt-1">
+                      Messages from the Contact and B2B forms arrive here.
+                    </p>
+                  </td>
+                </tr>
+              )}
+
+              {!loading && inquiries.map((inq) => (
                 <tr key={inq._id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                   <td className="py-4 font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                     <MessageSquare className="h-4 w-4 text-[#2d472c] dark:text-emerald-400 shrink-0" />
@@ -59,7 +114,7 @@ const AdminInquiries = () => {
                     <p className="line-clamp-2 leading-relaxed">{inq.message}</p>
                   </td>
                   <td className="py-4 text-neutral-500 font-mono text-[11px]">
-                    {inq.createdAt}
+                    {formatDate(inq.createdAt)}
                   </td>
                   <td className="py-4">
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${

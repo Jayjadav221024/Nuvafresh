@@ -9,6 +9,7 @@ import { useAuth } from '../hooks/useAuth';
 import API from '../api/axiosInstance';
 import PaymentModal from '../components/common/PaymentModal';
 import { ProductDetailPageSkeleton } from '../components/common/Skeleton';
+import { STORE_TOPICS, subscribeToStoreChanges } from '../lib/storeSync';
 
 const FAQ_DATA = [
   {
@@ -84,6 +85,8 @@ const ProductDetailPage = () => {
   const [activeTab, setActiveTab] = useState('purity'); // 'purity' | 'nutrition' | 'reviews' | 'faq'
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [reviews, setReviews] = useState(INITIAL_REVIEWS);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewNotice, setReviewNotice] = useState(null);
   const [faqsList, setFaqsList] = useState(FAQ_DATA);
   const [isBuyNowModalOpen, setIsBuyNowModalOpen] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -202,6 +205,40 @@ const ProductDetailPage = () => {
     fetchFaqs();
   }, [id]);
 
+  /* Approved reviews for this product. Runs after the product loads because
+     CSV-seeded products are matched by title rather than by id. */
+  const fetchReviews = React.useCallback(async () => {
+    if (!product) return;
+    try {
+      const { data } = await API.get('/admin/reviews/public', {
+        params: { product: id, productTitle: product.title }
+      });
+
+      if (data.success && data.reviews?.length > 0) {
+        setReviews(
+          data.reviews.map((r) => ({
+            id: r._id,
+            author: r.customerName,
+            verified: r.isVerifiedPurchase,
+            rating: r.rating,
+            date: new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+            title: r.title,
+            body: r.comment,
+            helpful: 0,
+            images: r.images || []
+          }))
+        );
+      }
+    } catch (e) {
+      // Keep the seeded examples rather than showing an empty reviews tab.
+    }
+  }, [id, product]);
+
+  useEffect(() => {
+    fetchReviews();
+    return subscribeToStoreChanges(STORE_TOPICS.REVIEWS, fetchReviews);
+  }, [fetchReviews]);
+
   const [uploadedReviewImages, setUploadedReviewImages] = useState([]);
 
   const handleImageFileChange = (e) => {
@@ -223,28 +260,44 @@ const ProductDetailPage = () => {
     setUploadedReviewImages(prev => prev.filter((_, idx) => idx !== index));
   };
 
-  const handleReviewSubmit = (e) => {
+  /* A review now goes to the server, where it waits for the admin's Reviews
+     screen to approve it. It used to live only in this component's state, so
+     it vanished on refresh and moderation had nothing to moderate. */
+  const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!newReview.author || !newReview.title || !newReview.body) {
-      alert('Please fill out all required fields');
+      setReviewNotice({ type: 'error', message: 'Please fill out all required fields.' });
       return;
     }
-    const created = {
-      id: Date.now(),
-      author: newReview.author,
-      verified: true,
-      rating: newReview.rating,
-      date: 'Just now',
-      title: newReview.title,
-      body: newReview.body,
-      helpful: 0,
-      images: [...uploadedReviewImages]
-    };
-    setReviews([created, ...reviews]);
-    setShowReviewForm(false);
-    setNewReview({ author: '', email: '', rating: 5, title: '', body: '' });
-    setUploadedReviewImages([]);
-    alert('Thank you! Your verified review with photos has been published.');
+
+    setSubmittingReview(true);
+    try {
+      const { data } = await API.post('/admin/reviews', {
+        product: /^[0-9a-fA-F]{24}$/.test(String(id)) ? id : undefined,
+        productTitle: product?.title || '',
+        customerName: newReview.author,
+        customerEmail: newReview.email || undefined,
+        rating: newReview.rating,
+        title: newReview.title,
+        comment: newReview.body,
+        images: [...uploadedReviewImages]
+      });
+
+      setShowReviewForm(false);
+      setNewReview({ author: '', email: '', rating: 5, title: '', body: '' });
+      setUploadedReviewImages([]);
+      setReviewNotice({
+        type: 'success',
+        message: data?.message || 'Thanks! Your review is awaiting moderation.'
+      });
+    } catch (err) {
+      setReviewNotice({
+        type: 'error',
+        message: err?.response?.data?.message || 'We could not submit your review. Please try again.'
+      });
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   if (loading || !product) {
@@ -654,6 +707,20 @@ const ProductDetailPage = () => {
           </button>
         </div>
 
+        {/* Submission result — a review is queued for moderation, not published */}
+        {reviewNotice && (
+          <div
+            role="status"
+            className={`mb-6 px-4 py-3 rounded-2xl text-xs font-semibold border ${
+              reviewNotice.type === 'error'
+                ? 'bg-rose-50 border-rose-200 text-rose-800'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            }`}
+          >
+            {reviewNotice.message}
+          </div>
+        )}
+
         {/* Modal / Inline Review Submission Form */}
         {showReviewForm && (
           <form onSubmit={handleReviewSubmit} className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-[#2d472c]/30 shadow-xl space-y-4 mb-12 animate-fadeIn">
@@ -747,9 +814,10 @@ const ProductDetailPage = () => {
 
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-full bg-[#2d472c] text-white text-xs font-bold shadow hover:bg-[#20341f] cursor-pointer mt-2"
+              disabled={submittingReview}
+              className="px-6 py-2.5 rounded-full bg-[#2d472c] text-white text-xs font-bold shadow hover:bg-[#20341f] cursor-pointer mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Submit Review
+              {submittingReview ? 'Submitting…' : 'Submit Review'}
             </button>
           </form>
         )}

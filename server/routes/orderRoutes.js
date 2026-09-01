@@ -1,10 +1,13 @@
 import express from 'express';
-import { 
-  createOrder, 
-  getOrders, 
-  getOrderById, 
-  updateOrderStatus, 
+import {
+  createOrder,
+  getOrders,
+  getOrderById,
+  updateOrderStatus,
   updateOrderTracking,
+  updateOrderDetails,
+  addOrderTimelineEntry,
+  fulfillOrder,
   deleteOrder
 } from '../controllers/orderController.js';
 
@@ -21,6 +24,7 @@ router.route('/track/:id')
 
 router.route('/:id')
   .get(getOrderById)
+  .put(updateOrderDetails)
   .delete(deleteOrder);
 
 // Admin order status & tracking updates
@@ -29,6 +33,13 @@ router.route('/:id/status')
 
 router.route('/:id/track')
   .put(updateOrderTracking);
+
+// Order detail screen: fulfillment and the staff timeline
+router.route('/:id/fulfill')
+  .post(fulfillOrder);
+
+router.route('/:id/timeline')
+  .post(addOrderTimelineEntry);
 
 export default router;
 

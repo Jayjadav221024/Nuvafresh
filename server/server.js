@@ -12,6 +12,10 @@ import orderRoutes from './routes/orderRoutes.js';
 import reelRoutes from './routes/reelRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import blogRoutes from './routes/blogRoutes.js';
+import collectionRoutes from './routes/collectionRoutes.js';
+import transferRoutes from './routes/transferRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
+import contentRoutes from './routes/contentRoutes.js';
 
 dotenv.config();
 
@@ -27,7 +31,8 @@ const app = express();
 
 // Middleware
 app.use(cors({ origin: '*' }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -36,6 +41,10 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/reels', reelRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/blogs', blogRoutes);
+app.use('/api/collections', collectionRoutes);
+app.use('/api/transfers', transferRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/content', contentRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

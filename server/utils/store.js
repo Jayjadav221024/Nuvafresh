@@ -158,8 +158,10 @@ export const addCustomerToStore = (user) => {
 };
 
 export const addOrderToStore = (orderData) => {
-  const orderId = orderData._id || `NUV-${Math.floor(100000 + Math.random() * 900000)}`;
-  
+  // An order that saved to MongoDB arrives with an ObjectId, not a string, and
+  // the tracking number below builds on it with .replace().
+  const orderId = String(orderData._id || `NUV-${Math.floor(100000 + Math.random() * 900000)}`);
+
   const initialStages = [
     { id: 1, title: 'Order Confirmed', description: 'Fresh farm produce and pure oils allocated for your order', time: 'Just Now', completed: true },
     { id: 2, title: '4-Stage Aqueous Ozone Wash (O₃)', description: 'Passing through micro-bubble aqueous ozone chambers for 99.9% chemical/pesticide removal', time: 'Preparing', completed: false },

@@ -1,209 +1,123 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, ShoppingBag, Package, FolderTree, Tag, Users, Boxes,
-  Edit3, BookOpen, Star, HelpCircle, Image, Mail, MailCheck, MessageSquare,
-  Shield, KeyRound, FileText, Sun, Moon, LogOut, Menu, X, ShieldCheck,
-  Search, ExternalLink, ChevronRight, Activity, ArrowUpRight, Sparkles
+import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
+import {
+  Home, ShoppingBag, Package, Tag, Users, Sun, Moon, LogOut, Menu, X,
+  KeyRound, FileText, ShieldCheck, Search, ExternalLink, ChevronRight,
+  ChevronDown, Activity, Bell, Settings, Globe, Layers, CornerDownRight,
+  MailCheck
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { NUVA_LOGO_BASE64 } from '../assets/logoBase64';
 
-const NAV_GROUPS = [
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN NAVIGATION
+   Shopify's information architecture, mapped one-to-one onto the pages
+   this admin actually has. Every entry below resolves to a real route —
+   no placeholder destinations.
+═══════════════════════════════════════════════════════════════════ */
+const NAV_STRUCTURE = [
   {
-    heading: null,
-    items: [
-      { 
-        label: 'Dashboard', 
-        path: '/admin', 
-        icon: LayoutDashboard, 
-        end: true,
-        group: 'OVERVIEW',
-        description: 'Store performance metrics, sales, and operations overview',
-        keywords: ['home', 'overview', 'metrics', 'stats', 'analytics', 'summary', 'charts']
-      }
+    type: 'link',
+    label: 'Home',
+    path: '/admin',
+    icon: Home,
+    end: true,
+    keywords: ['home', 'dashboard', 'overview', 'metrics', 'stats']
+  },
+  {
+    type: 'group',
+    label: 'Orders',
+    icon: ShoppingBag,
+    children: [
+      { label: 'All orders', path: '/admin/orders', keywords: ['orders', 'sales', 'fulfillment', 'shipping'] },
+      { label: 'Drafts', path: '/admin/orders?view=drafts', keywords: ['drafts', 'pending', 'quotes'] },
+      { label: 'Abandoned checkouts', path: '/admin/orders?view=abandoned', keywords: ['abandoned', 'cart', 'recovery'] }
     ]
   },
   {
-    heading: 'SELLING',
-    items: [
-      { 
-        label: 'Orders', 
-        path: '/admin/orders', 
-        icon: ShoppingBag,
-        group: 'SELLING',
-        description: 'Track customer purchases and fulfillment status',
-        keywords: ['purchases', 'fulfillment', 'shipment', 'tracking', 'invoices', 'sales', 'cart']
-      },
-      { 
-        label: 'Products', 
-        path: '/admin/products', 
-        icon: Package,
-        group: 'SELLING',
-        description: 'Manage cold-pressed oil catalog, pricing, and variants',
-        keywords: ['items', 'inventory', 'pricing', 'cold pressed', 'edible oils', 'catalog', 'stock']
-      },
-      { 
-        label: 'Categories', 
-        path: '/admin/categories', 
-        icon: FolderTree,
-        group: 'SELLING',
-        description: 'Organize products into departments and collections',
-        keywords: ['collections', 'taxonomies', 'departments', 'groups', 'types']
-      },
-      { 
-        label: 'Coupons & Discounts', 
-        path: '/admin/coupons', 
-        icon: Tag,
-        group: 'SELLING',
-        description: 'Promotional voucher codes and discount rules',
-        keywords: ['promo', 'vouchers', 'discount', 'offers', 'deals', 'sale', 'coupons']
-      },
-      { 
-        label: 'Customers', 
-        path: '/admin/customers', 
-        icon: Users,
-        group: 'SELLING',
-        description: 'Customer directory, order histories, and profiles',
-        keywords: ['users', 'clients', 'buyers', 'profiles', 'accounts', 'directory']
-      },
-      { 
-        label: 'Inventory', 
-        path: '/admin/inventory', 
-        icon: Boxes,
-        group: 'SELLING',
-        description: 'Stock levels, warehouse tracking, and restock alerts',
-        keywords: ['stock', 'warehouse', 'restock', 'quantities', 'supplies', 'levels']
-      }
+    type: 'group',
+    label: 'Products',
+    icon: Package,
+    children: [
+      { label: 'All products', path: '/admin/products', keywords: ['products', 'catalog', 'produce', 'staples'] },
+      { label: 'Collections', path: '/admin/categories', keywords: ['collections', 'categories', 'departments'] },
+      { label: 'Inventory', path: '/admin/inventory', keywords: ['inventory', 'stock', 'warehouse', 'restock'] },
+      { label: 'Transfers', path: '/admin/inventory?view=transfers', keywords: ['transfers', 'locations', 'logistics'] }
     ]
   },
   {
-    heading: 'CONTENT',
-    items: [
-      { 
-        label: 'Website Editor', 
-        path: '/admin/editor', 
-        icon: Edit3, 
-        badge: 'Live',
-        group: 'CONTENT',
-        description: 'Live visual editor for homepage hero banners and layout',
-        keywords: ['homepage', 'cms', 'banners', 'announcements', 'layout', 'design', 'customizer']
-      },
-      { 
-        label: '3D Video Reels', 
-        path: '/admin/reels', 
-        icon: Image,
-        group: 'CONTENT',
-        description: 'Interactive vertical 3D reels and showcase video media',
-        keywords: ['media', 'reels', 'videos', 'interactive', 'clips', 'stories', 'shorts']
-      },
-      { 
-        label: 'Blogs', 
-        path: '/admin/blogs', 
-        icon: BookOpen,
-        group: 'CONTENT',
-        description: 'Publish wellness guides and educational health articles',
-        keywords: ['articles', 'posts', 'recipes', 'wellness', 'news', 'seo', 'content']
-      },
-      { 
-        label: 'Testimonials', 
-        path: '/admin/testimonials', 
-        icon: Star,
-        group: 'CONTENT',
-        description: 'Customer stories, video reviews, and endorsements',
-        keywords: ['endorsements', 'feedback', 'stories', 'ratings', 'social proof']
-      },
-      { 
-        label: 'FAQs', 
-        path: '/admin/faqs', 
-        icon: HelpCircle,
-        group: 'CONTENT',
-        description: 'Frequently asked questions and knowledgebase',
-        keywords: ['questions', 'answers', 'help', 'support', 'knowledgebase', 'ozone']
-      }
+    type: 'group',
+    label: 'Customers',
+    icon: Users,
+    children: [
+      { label: 'All customers', path: '/admin/customers', keywords: ['customers', 'buyers', 'accounts', 'directory'] },
+      { label: 'Reviews & ratings', path: '/admin/reviews', keywords: ['reviews', 'ratings', 'stars', 'feedback'] },
+      { label: 'Inquiries', path: '/admin/inquiries', keywords: ['inquiries', 'contact', 'leads', 'messages'] },
+      { label: 'Newsletter', path: '/admin/newsletter', keywords: ['newsletter', 'subscribers', 'mailing list'] }
     ]
   },
   {
-    heading: 'ENGAGEMENT',
-    items: [
-      { 
-        label: 'Inquiries (Contact)', 
-        path: '/admin/inquiries', 
-        icon: MessageSquare,
-        group: 'ENGAGEMENT',
-        description: 'Inbound customer contact messages and inquiries',
-        keywords: ['contact', 'messages', 'leads', 'support tickets', 'distributor', 'forms']
-      },
-      { 
-        label: 'Newsletter Subscribers', 
-        path: '/admin/newsletter', 
-        icon: MailCheck,
-        group: 'ENGAGEMENT',
-        description: 'Email subscribers list and marketing audience',
-        keywords: ['subscribers', 'mailing list', 'emails', 'leads', 'audience', 'marketing']
-      },
-      { 
-        label: 'Reviews & Ratings', 
-        path: '/admin/reviews', 
-        icon: Star,
-        group: 'ENGAGEMENT',
-        description: 'Moderate customer reviews, star ratings, and feedback',
-        keywords: ['feedback', 'stars', 'ratings', 'comments', 'moderation', 'social proof']
-      }
+    type: 'link',
+    label: 'Discounts',
+    path: '/admin/discounts',
+    icon: Tag,
+    keywords: ['discounts', 'coupons', 'vouchers', 'promo', 'deals', 'codes']
+  },
+  {
+    type: 'group',
+    label: 'Content',
+    icon: Layers,
+    children: [
+      { label: 'Website Editor', path: '/admin/editor', badge: 'Live', keywords: ['editor', 'homepage', 'cms', 'sections', 'layout'] },
+      { label: 'Metaobjects', path: '/admin/metaobjects', keywords: ['metaobjects', 'custom content', 'definitions', 'entries', 'structured'] },
+      { label: 'Files', path: '/admin/files', keywords: ['files', 'media', 'images', 'uploads', 'library', 'assets'] },
+      { label: 'Menus', path: '/admin/menus', keywords: ['menus', 'navigation', 'links', 'header', 'footer'] },
+      { label: 'Blog posts', path: '/admin/blogs', keywords: ['blogs', 'articles', 'posts', 'journal'] },
+      { label: '3D Video Reels', path: '/admin/reels', keywords: ['reels', 'videos', 'clips', 'shorts'] },
+      { label: 'Testimonials', path: '/admin/testimonials', keywords: ['testimonials', 'stories', 'social proof'] },
+      { label: 'FAQs & Help', path: '/admin/faqs', keywords: ['faqs', 'questions', 'help', 'support'] }
     ]
   },
   {
-    heading: 'SYSTEM',
-    items: [
-      { 
-        label: 'Revenue & Analytics', 
-        path: '/admin/analytics', 
-        icon: Activity,
-        group: 'SYSTEM',
-        description: 'Financial reports and revenue conversion metrics',
-        keywords: ['revenue', 'sales stats', 'reports', 'financial', 'graphs', 'growth', 'kpi']
-      },
-      { 
-        label: 'Email Setup', 
-        path: '/admin/email-setup', 
-        icon: Mail,
-        group: 'SYSTEM',
-        description: 'SMTP server configuration and transactional mail',
-        keywords: ['smtp', 'mail config', 'notifications', 'sendgrid', 'mailer', 'settings']
-      },
-      { 
-        label: 'Email Templates', 
-        path: '/admin/email-templates', 
-        icon: FileText,
-        group: 'SYSTEM',
-        description: 'Customize HTML transactional email templates',
-        keywords: ['templates', 'order email', 'welcome mail', 'html templates', 'branding']
-      },
-      { 
-        label: 'Sign-in & Audit Logs', 
-        path: '/admin/audit-logs', 
-        icon: Shield,
-        group: 'SYSTEM',
-        description: 'Security access trail and admin IP audit logs',
-        keywords: ['security', 'audit', 'logs', 'history', 'ip address', 'compliance', 'sessions']
-      },
-      { 
-        label: 'User Roles & Access', 
-        path: '/admin/roles', 
-        icon: KeyRound,
-        group: 'SYSTEM',
-        description: 'Role-based access control (RBAC) and permissions',
-        keywords: ['rbac', 'permissions', 'staff', 'super admin', 'access control', 'privileges']
-      }
+    type: 'group',
+    label: 'Analytics',
+    icon: Activity,
+    children: [
+      { label: 'Overview', path: '/admin/analytics', keywords: ['analytics', 'revenue', 'growth', 'kpi', 'dashboard'] },
+      { label: 'Reports', path: '/admin/reports', keywords: ['reports', 'library', 'sessions', 'sales', 'acquisition'] },
+      { label: 'Live View', path: '/admin/live-view', keywords: ['live', 'realtime', 'right now', 'visitors', 'globe'] }
     ]
   }
 ];
 
-// Flatten all navigation items for instant search filtering
-const ALL_ADMIN_NAV_ITEMS = NAV_GROUPS.flatMap(group => group.items);
+// Shopify's "Sales channels" block. Only the storefront is a real channel here.
+const SALES_CHANNELS = [
+  { label: 'Online Store', icon: Globe, path: '/', external: true }
+];
+
+// Shopify's bottom "Settings" popover, filled with this admin's system pages.
+const SETTINGS_ITEMS = [
+  { label: 'Staff & permissions', path: '/admin/roles', icon: KeyRound, keywords: ['roles', 'staff', 'permissions', 'rbac'] },
+  { label: 'Email setup (SMTP)', path: '/admin/email-setup', icon: MailCheck, keywords: ['email', 'smtp', 'mail config'] },
+  { label: 'Email templates', path: '/admin/email-templates', icon: FileText, keywords: ['templates', 'order email', 'html'] },
+  { label: 'Security audit logs', path: '/admin/audit-logs', icon: ShieldCheck, keywords: ['audit', 'logs', 'security', 'sign-in'] }
+];
+
+// Flattened index powering the Ctrl+K command search.
+const ALL_SEARCHABLE_ITEMS = [
+  ...NAV_STRUCTURE.flatMap((item) =>
+    item.type === 'group'
+      ? item.children.map((c) => ({ ...c, group: item.label }))
+      : [{ label: item.label, path: item.path, keywords: item.keywords, group: 'General' }]
+  ),
+  ...SETTINGS_ITEMS.map((s) => ({ ...s, group: 'Settings' }))
+];
+
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState({});
+  const [channelsOpen, setChannelsOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     try {
       return localStorage.getItem('nuva_admin_theme') === 'dark';
@@ -212,8 +126,12 @@ const AdminLayout = () => {
     }
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   
   const searchInputRef = useRef(null);
+  const userDropdownRef = useRef(null);
+  const settingsMenuRef = useRef(null);
 
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -245,19 +163,25 @@ const AdminLayout = () => {
     }
   }, [isDarkMode]);
 
-  // Global keyboard shortcut (Ctrl+K or /) to focus the Sidebar Search Bar
+  /* `.dark` drives every dark: utility in the app now, so leaving it behind
+     when the merchant clicks through to the storefront would darken a shop
+     that has no dark theme. */
+  useEffect(() => () => document.documentElement.classList.remove('dark'), []);
+
+  // Global keyboard shortcut (Ctrl+K or /) to focus top Search Bar
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setSidebarOpen(true);
         searchInputRef.current?.focus();
       } else if (e.key === '/' && document.activeElement !== searchInputRef.current && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
         e.preventDefault();
-        setSidebarOpen(true);
         searchInputRef.current?.focus();
-      } else if (e.key === 'Escape' && document.activeElement === searchInputRef.current) {
+      } else if (e.key === 'Escape') {
         setSearchQuery('');
+        setIsSearchFocused(false);
+        setUserDropdownOpen(false);
+        setSettingsOpen(false);
         searchInputRef.current?.blur();
       }
     };
@@ -266,305 +190,518 @@ const AdminLayout = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Close the user dropdown and the settings popover when clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
+        setUserDropdownOpen(false);
+      }
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(event.target)) {
+        setSettingsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleGroup = (groupName) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupName]: !prev[groupName]
+    }));
+  };
+
   // Filter items matching the search query
-  const filteredNavItems = useMemo(() => {
+  const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return null; // When empty, show normal full grouped navigation
-    return ALL_ADMIN_NAV_ITEMS.filter((item) => {
+    if (!q) return [];
+    return ALL_SEARCHABLE_ITEMS.filter((item) => {
       const matchLabel = item.label.toLowerCase().includes(q);
       const matchGroup = item.group?.toLowerCase().includes(q);
       const matchPath = item.path.toLowerCase().includes(q);
-      const matchDescription = item.description?.toLowerCase().includes(q);
       const matchKeywords = item.keywords?.some(k => k.toLowerCase().includes(q));
-      return matchLabel || matchGroup || matchPath || matchDescription || matchKeywords;
+      return matchLabel || matchGroup || matchPath || matchKeywords;
     });
   }, [searchQuery]);
 
-  return (
-    <div className={`flex h-screen font-sans antialiased overflow-hidden ${isDarkMode ? 'dark admin-theme-dark bg-neutral-950 text-neutral-100' : 'admin-theme-light bg-[#f7f6f2] text-neutral-900'}`}>
-      
-      {/* Mobile Backdrop */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-neutral-950/60 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+  /* ── Active-route matching ─────────────────────────────────────
+     Several children share a pathname and differ only by ?view=
+     (All orders / Drafts / Abandoned checkouts). NavLink ignores the
+     query string, so it would light all three up at once — this
+     compares the view param too.
+  ─────────────────────────────────────────────────────────────── */
+  const isNavActive = (to) => {
+    const [path, search] = to.split('?');
+    if (location.pathname !== path) return false;
+    const wanted = new URLSearchParams(search || '').get('view');
+    const current = new URLSearchParams(location.search).get('view');
+    return (wanted || null) === (current || null);
+  };
 
-      {/* Sidebar (Fixed left with full RBAC & Grouped Architecture) */}
-      <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-72 flex flex-col transition-transform duration-300 ease-in-out border-r ${
-          isDarkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'
-        } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
-      >
-        {/* Brand Header */}
-        <div className={`h-20 flex items-center justify-between px-6 border-b shrink-0 ${isDarkMode ? 'border-neutral-800' : 'border-neutral-200'}`}>
-          <div className="flex items-center gap-3">
-            <img 
-              src={NUVA_LOGO_BASE64} 
-              alt="Nuva Nutrition Admin" 
-              className="h-9 w-auto object-contain bg-white dark:bg-neutral-800 p-1 rounded-lg"
-            />
-            <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-black uppercase tracking-wider">
-              Admin
-            </span>
-          </div>
-          <button 
-            className="lg:hidden text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
-            onClick={() => setSidebarOpen(false)}
+  const groupHasActiveChild = (group) => group.children.some((c) => isNavActive(c.path));
+
+  const isSettingsRouteActive = SETTINGS_ITEMS.some((s) => location.pathname === s.path);
+
+  // Shopify keeps the group containing the current page open.
+  useEffect(() => {
+    const owner = NAV_STRUCTURE.find(
+      (item) => item.type === 'group' && item.children.some((c) => c.path.split('?')[0] === location.pathname)
+    );
+    if (owner) setExpandedGroups((prev) => (prev[owner.label] ? prev : { ...prev, [owner.label]: true }));
+  }, [location.pathname]);
+
+  // Shared item chrome so top-level links, children and channels match.
+  const itemClass = (active) =>
+    `flex items-center gap-2.5 px-3 py-[7px] rounded-lg transition-colors duration-150 ${
+      active
+        ? isDarkMode
+          ? 'bg-[#2b2b2b] text-white font-bold'
+          : 'bg-white text-[#1a1a1a] font-bold shadow-sm'
+        : isDarkMode
+          ? 'text-neutral-400 hover:text-white hover:bg-[#242424]'
+          : 'text-[#474747] hover:text-[#1a1a1a] hover:bg-[#dedede]'
+    }`;
+
+  return (
+    <div className={`admin-shell fixed inset-0 flex flex-col h-screen max-h-screen antialiased overflow-hidden ${
+      isDarkMode ? 'dark bg-[#111213] text-[#e3e3e3]' : 'bg-[#ebebeb] text-[#1a1a1a]'
+    }`}>
+      
+      {/* ─────────────────────────────────────────────────────────────
+          1. TOP BLACK NAVIGATION BAR (Shopify Admin Style)
+      ───────────────────────────────────────────────────────────── */}
+      <header className="h-14 bg-[#1a1a1a] text-white flex items-center justify-between px-4 sm:px-6 shrink-0 z-30 select-none shadow-sm">
+        
+        {/* Left: Brand Logo & Mobile Toggle */}
+        <div className="flex items-center gap-3 w-64 shrink-0">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="lg:hidden p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+            aria-label="Toggle Navigation"
           >
-            <X className="h-6 w-6" />
+            <Menu className="h-5 w-5" />
           </button>
+
+          <Link to="/admin" className="flex items-center gap-2 group">
+            {/* Nuva Brand Badge & Title in Shopify Style */}
+            <div className="h-7 w-7 rounded-lg bg-[#25d366] flex items-center justify-center font-bold text-white shadow-sm transition-transform group-hover:scale-105">
+              <span className="text-xs font-black tracking-tight text-[#0a2912]">NV</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="brand-wordmark font-extrabold text-[15px] tracking-tight text-white">
+                nuva
+              </span>
+              <span className="text-[11px] font-semibold text-neutral-400">
+                admin
+              </span>
+            </div>
+          </Link>
         </div>
 
-        {/* Search Bar section (Located directly before the Dashboard button) */}
-        <div className={`p-3 pb-2 border-b shrink-0 ${isDarkMode ? 'border-neutral-800/80 bg-neutral-900/60' : 'border-neutral-100 bg-[#fbfaf7]'}`}>
-          <div className={`relative flex items-center rounded-xl border transition-all duration-150 ${
-            searchQuery
-              ? isDarkMode
-                ? 'bg-neutral-800 border-emerald-500 ring-1 ring-emerald-500/20'
-                : 'bg-white border-[#2d472c] ring-1 ring-[#2d472c]/20 shadow-xs'
-              : isDarkMode 
-                ? 'bg-neutral-800/60 border-neutral-700/80 hover:border-neutral-600 focus-within:border-emerald-500' 
-                : 'bg-neutral-100/90 border-neutral-200 hover:border-neutral-300 focus-within:border-[#2d472c] focus-within:bg-white'
-          }`}>
-            <Search className="h-3.5 w-3.5 ml-3 mr-2 text-neutral-400 shrink-0 pointer-events-none" />
+        {/* Center: Global Search Bar with CTRL K badge */}
+        <div className="flex-1 max-w-xl mx-4 relative">
+          <div className="relative flex items-center">
+            <Search className="h-4 w-4 absolute left-3.5 text-neutral-400 pointer-events-none" />
             <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search navbar details..."
-              className="w-full py-2 bg-transparent text-xs font-medium text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none"
+              onFocus={() => setIsSearchFocused(true)}
+              placeholder="Search in Nuva admin..."
+              className="w-full h-9 pl-9 pr-16 bg-[#303030] hover:bg-[#383838] focus:bg-[#303030] text-white placeholder-neutral-400 text-xs font-medium rounded-lg border border-transparent focus:border-neutral-500 focus:outline-none transition-all duration-150"
             />
-            <div className="pr-2 flex items-center shrink-0">
+            <div className="absolute right-2.5 flex items-center gap-1">
               {searchQuery ? (
                 <button
                   onClick={() => {
                     setSearchQuery('');
                     searchInputRef.current?.focus();
                   }}
-                  className="p-1 rounded text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
-                  title="Clear search"
+                  className="p-1 rounded text-neutral-400 hover:text-white"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               ) : (
-                <div className="hidden sm:flex items-center gap-0.5 px-1 py-0.5 rounded border border-neutral-300/80 dark:border-neutral-700/80 bg-neutral-200/50 dark:bg-neutral-800 text-[9px] font-mono text-neutral-400">
-                  <span>Ctrl</span>
+                <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-[#424242] text-[10px] font-mono text-neutral-300 font-semibold border border-neutral-600">
+                  <span>CTRL</span>
                   <span>K</span>
-                </div>
+                </kbd>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Navigation Items (Real-time Filtered or Full Grouped Navigation) */}
-        <nav className="flex-1 px-3 py-3 space-y-6 overflow-y-auto custom-scrollbar">
-          {filteredNavItems !== null ? (
-            /* Search Results Mode */
-            <div className="space-y-1">
-              <div className="px-3 pb-1 flex items-center justify-between text-[11px] font-extrabold tracking-wider text-neutral-500 dark:text-neutral-400 uppercase font-display">
-                <span>Matching Details ({filteredNavItems.length})</span>
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="text-[10px] lowercase font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
-                  >
-                    reset
-                  </button>
-                )}
+          {/* Quick Search Dropdown Modal */}
+          {isSearchFocused && searchQuery && (
+            <div className="absolute top-11 left-0 right-0 bg-[#242424] border border-neutral-700 rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="p-2 border-b border-neutral-700/60 flex items-center justify-between text-[11px] text-neutral-400 font-bold px-3">
+                <span>RESULTS FOR "{searchQuery}"</span>
+                <button
+                  onClick={() => {
+                    setIsSearchFocused(false);
+                    setSearchQuery('');
+                  }}
+                  className="text-xs text-neutral-400 hover:text-white"
+                >
+                  Esc to close
+                </button>
               </div>
 
-              {filteredNavItems.length > 0 ? (
-                filteredNavItems.map((item) => (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    end={item.end}
-                    onClick={() => {
-                      setSidebarOpen(false);
-                      setSearchQuery('');
-                    }}
-                    className={({ isActive }) =>
-                      `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-                        isActive
-                          ? 'bg-[#2d472c] text-white shadow-sm font-extrabold'
-                          : isDarkMode
-                          ? 'text-neutral-200 hover:bg-neutral-800 hover:text-white'
-                          : 'text-neutral-800 hover:bg-[#f1eee7] hover:text-[#2d472c]'
-                      }`
-                    }
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <item.icon className="h-4 w-4 stroke-[2.2] shrink-0" />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 truncate">
-                          <span>{item.label}</span>
-                          {item.group && (
-                            <span className={`text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                              isDarkMode 
-                                ? 'bg-neutral-800 border-neutral-700 text-neutral-300' 
-                                : 'bg-white border-neutral-300 text-neutral-700 font-bold'
-                            }`}>
-                              {item.group}
-                            </span>
-                          )}
-                        </div>
+              <div className="max-h-80 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
+                {searchResults.length > 0 ? (
+                  searchResults.map((item, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        navigate(item.path);
+                        setIsSearchFocused(false);
+                        setSearchQuery('');
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left text-xs text-neutral-200 hover:bg-[#333333] hover:text-white transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Search className="h-3.5 w-3.5 text-neutral-400" />
+                        <span className="font-semibold">{item.label}</span>
                       </div>
-                    </div>
-                    {item.badge && (
-                      <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white px-1.5 py-0.5 rounded-md">
-                        {item.badge}
+                      <span className="text-[10px] uppercase font-bold text-neutral-400 bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700">
+                        {item.group}
                       </span>
-                    )}
-                  </NavLink>
-                ))
-              ) : (
-                <div className="p-4 text-center">
-                  <Search className="h-6 w-6 text-neutral-400 dark:text-neutral-500 mx-auto mb-1.5" />
-                  <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                    No navbar details found
-                  </p>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">
-                    No admin section matches "{searchQuery}"
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Default Grouped Navigation (Starts with Dashboard Button) */
-            NAV_GROUPS.map((group, gIdx) => (
-              <div key={gIdx} className="space-y-1">
-                {group.heading && (
-                  <div className="px-3 pb-1 text-[11px] font-extrabold tracking-wider text-neutral-500 dark:text-neutral-400 uppercase font-display">
-                    {group.heading}
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-neutral-400 text-xs">
+                    No matching admin sections or pages found.
                   </div>
                 )}
-                {group.items.map((item) => (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    end={item.end}
-                    onClick={() => setSidebarOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
-                        isActive
-                          ? 'bg-[#2d472c] text-white shadow-sm font-extrabold'
-                          : isDarkMode
-                          ? 'text-neutral-200 hover:bg-neutral-800 hover:text-white'
-                          : 'text-neutral-800 hover:bg-[#f1eee7] hover:text-[#2d472c]'
-                      }`
-                    }
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Quick Tools, Live Store, Notifications & User Profile */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          
+          {/* Live Storefront link */}
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#303030] hover:bg-[#3d3d3d] text-neutral-200 hover:text-white text-xs font-medium transition-colors"
+            title="Open Live Store"
+          >
+            <span>Live Store</span>
+            <ExternalLink className="h-3.5 w-3.5 text-neutral-400" />
+          </a>
+
+          {/* O3 Chamber status badge */}
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1b3823] border border-[#25d366]/40 text-[#25d366] text-[11px] font-semibold">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#25d366] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#25d366]"></span>
+            </span>
+            <span>O₃ Active</span>
+          </div>
+
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleDarkMode}
+            className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-[#303030] transition-colors"
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {isDarkMode ? <Sun className="h-4 w-4 text-amber-300" /> : <Moon className="h-4 w-4" />}
+          </button>
+
+          {/* Notifications Icon */}
+          <button 
+            className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-[#303030] transition-colors relative"
+            title="Notifications"
+          >
+            <Bell className="h-4 w-4" />
+            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-500"></span>
+          </button>
+
+          {/* User Account Button (Green Avatar NN Nuva Nutrition style) */}
+          <div className="relative" ref={userDropdownRef}>
+            <button
+              onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+              className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-lg hover:bg-[#303030] transition-colors group"
+            >
+              {/* Green Rounded Square Avatar */}
+              <div className="h-7 w-7 rounded-lg bg-[#25d366] text-[#0d351c] font-black text-xs flex items-center justify-center shadow-xs">
+                NN
+              </div>
+              <span className="hidden sm:inline text-xs font-semibold text-neutral-200 group-hover:text-white max-w-[110px] truncate">
+                {user?.name || 'Nuva Nutrition'}
+              </span>
+              <ChevronDown className="h-3.5 w-3.5 text-neutral-400 group-hover:text-white transition-transform" />
+            </button>
+
+            {/* User Dropdown */}
+            {userDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-[#242424] border border-neutral-700 rounded-xl shadow-xl py-2 z-50 animate-in fade-in">
+                <div className="px-3.5 py-2 border-b border-neutral-700/60">
+                  <p className="text-xs font-bold text-white truncate">{user?.name || 'Nuva Nutrition'}</p>
+                  <p className="text-[11px] text-neutral-400 truncate">{user?.email || 'admin@nuvanutrition.com'}</p>
+                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700 text-emerald-300 text-[10px] font-bold">
+                    Super Administrator
+                  </span>
+                </div>
+
+                <div className="py-1">
+                  <Link
+                    to="/admin/roles"
+                    onClick={() => setUserDropdownOpen(false)}
+                    className="flex items-center gap-2 px-3.5 py-2 text-xs text-neutral-200 hover:bg-[#333333] hover:text-white"
                   >
-                    <div className="flex items-center gap-3">
-                      <item.icon className="h-4 w-4 stroke-[2.2]" />
+                    <KeyRound className="h-3.5 w-3.5 text-neutral-400" />
+                    <span>Manage Staff & Access</span>
+                  </Link>
+                  <Link
+                    to="/admin/audit-logs"
+                    onClick={() => setUserDropdownOpen(false)}
+                    className="flex items-center gap-2 px-3.5 py-2 text-xs text-neutral-200 hover:bg-[#333333] hover:text-white"
+                  >
+                    <ShieldCheck className="h-3.5 w-3.5 text-neutral-400" />
+                    <span>Security Audit Logs</span>
+                  </Link>
+                </div>
+
+                <div className="pt-1 border-t border-neutral-700/60">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-rose-400 hover:bg-rose-950/40 hover:text-rose-300 transition-colors"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span>Log out</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </header>
+
+      {/* ─────────────────────────────────────────────────────────────
+          2. MAIN BODY WRAPPER: SIDEBAR + MAIN CONTENT CANVAS
+      ───────────────────────────────────────────────────────────── */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+
+        {/* Mobile Backdrop */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 z-40 bg-neutral-950/60 backdrop-blur-sm lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Left Sidebar (Light Gray Shopify Navigation) */}
+        <aside
+          className={`admin-surface fixed lg:static inset-y-14 lg:inset-y-auto left-0 z-40 w-60 flex flex-col min-h-0 shrink-0 transition-transform duration-200 ease-in-out select-none border-r ${
+            isDarkMode 
+              ? 'bg-[#1a1a1a] border-neutral-800 text-neutral-300' 
+              : 'bg-[#ebebeb] border-[#d8d8d8] text-[#303030]'
+          } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        >
+          {/* ── Main navigation (Shopify information architecture) ── */}
+          <nav className="flex-1 min-h-0 px-3 py-3 overflow-y-auto overscroll-contain space-y-0.5 text-xs font-semibold custom-scrollbar">
+
+            {NAV_STRUCTURE.map((item) => {
+              /* Plain top-level destination */
+              if (item.type === 'link') {
+                const active = isNavActive(item.path) || (!item.end && location.pathname.startsWith(`${item.path}/`));
+                return (
+                  <Link
+                    key={item.label}
+                    to={item.path}
+                    onClick={() => setSidebarOpen(false)}
+                    className={itemClass(item.end ? location.pathname === item.path : active)}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0 stroke-[1.75]" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              }
+
+              /* Expandable group with a child list */
+              const isExpanded = !!expandedGroups[item.label];
+              const hasActiveChild = groupHasActiveChild(item);
+
+              return (
+                <div key={item.label} className="space-y-0.5">
+                  <button
+                    onClick={() => toggleGroup(item.label)}
+                    aria-expanded={isExpanded}
+                    className={`w-full justify-between ${itemClass(hasActiveChild && !isExpanded)}`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <item.icon className="h-4 w-4 shrink-0 stroke-[1.75]" />
                       <span>{item.label}</span>
+                    </span>
+                    <ChevronRight
+                      className={`h-3.5 w-3.5 shrink-0 text-neutral-400 transition-transform duration-200 ${
+                        isExpanded ? 'rotate-90' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {/* Child list with the vertical tree connector */}
+                  {isExpanded && (
+                    <div className="relative pl-[26px] py-0.5 space-y-0.5">
+                      <div
+                        className={`absolute left-[15px] top-1 bottom-2 w-px ${
+                          isDarkMode ? 'bg-neutral-800' : 'bg-[#d0d0d0]'
+                        }`}
+                      />
+
+                      {item.children.map((sub) => {
+                        const active = isNavActive(sub.path);
+                        return (
+                          <Link
+                            key={sub.path}
+                            to={sub.path}
+                            onClick={() => setSidebarOpen(false)}
+                            className={`group/sub relative flex items-center justify-between gap-1.5 pl-2 pr-2.5 py-[7px] rounded-lg text-xs transition-colors duration-150 ${
+                              active
+                                ? isDarkMode
+                                  ? 'bg-[#2b2b2b] text-white font-bold'
+                                  : 'bg-white text-[#1a1a1a] font-bold shadow-sm'
+                                : isDarkMode
+                                  ? 'text-neutral-400 hover:text-white hover:bg-[#242424]'
+                                  : 'text-[#595959] hover:text-[#1a1a1a] hover:bg-[#dedede]'
+                            }`}
+                          >
+                            <span className="flex items-center gap-1.5 min-w-0">
+                              {/* The ↳ marker Shopify shows on the active / hovered child */}
+                              <CornerDownRight
+                                className={`h-3 w-3 shrink-0 transition-opacity ${
+                                  active
+                                    ? 'opacity-100 text-neutral-500'
+                                    : 'opacity-0 group-hover/sub:opacity-100 text-neutral-400'
+                                }`}
+                              />
+                              <span className="truncate">{sub.label}</span>
+                            </span>
+                            {sub.badge && (
+                              <span className="shrink-0 text-[9px] font-bold bg-[#25d366] text-[#0d351c] px-1.5 py-px rounded">
+                                {sub.badge}
+                              </span>
+                            )}
+                          </Link>
+                        );
+                      })}
                     </div>
-                    {item.badge && (
-                      <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-600 text-white px-1.5 py-0.5 rounded-md">
-                        {item.badge}
+                  )}
+                </div>
+              );
+            })}
+
+            {/* ── Sales channels ── */}
+            <div className="pt-4">
+              <button
+                onClick={() => setChannelsOpen((v) => !v)}
+                aria-expanded={channelsOpen}
+                className="w-full px-3 pb-1.5 text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 flex items-center justify-between hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors"
+              >
+                <span>Sales channels</span>
+                <ChevronRight className={`h-3 w-3 transition-transform duration-200 ${channelsOpen ? 'rotate-90' : ''}`} />
+              </button>
+
+              {channelsOpen && (
+                <div className="space-y-0.5">
+                  {SALES_CHANNELS.map((chan) => (
+                    <a
+                      key={chan.label}
+                      href={chan.path}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`${itemClass(false)} justify-between`}
+                    >
+                      <span className="flex items-center gap-2.5 truncate">
+                        <chan.icon className="h-4 w-4 shrink-0 text-neutral-500" />
+                        <span className="truncate">{chan.label}</span>
                       </span>
-                    )}
-                  </NavLink>
+                      <ExternalLink className="h-3 w-3 text-neutral-400 shrink-0" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </nav>
+
+          {/* ── Bottom pinned Settings (opens the system pages) ── */}
+          <div
+            ref={settingsMenuRef}
+            className={`relative p-2 border-t shrink-0 ${
+              isDarkMode ? 'border-neutral-800 bg-[#161616]' : 'border-[#d8d8d8] bg-[#e4e4e4]'
+            }`}
+          >
+            {settingsOpen && (
+              <div
+                className={`absolute bottom-full left-2 right-2 mb-2 rounded-xl border shadow-xl overflow-hidden py-1 ${
+                  isDarkMode ? 'bg-[#242424] border-neutral-700' : 'bg-white border-[#d8d8d8]'
+                }`}
+              >
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-neutral-200/60 dark:border-neutral-700">
+                  Store settings
+                </div>
+                {SETTINGS_ITEMS.map((s) => (
+                  <Link
+                    key={s.path}
+                    to={s.path}
+                    onClick={() => { setSettingsOpen(false); setSidebarOpen(false); }}
+                    className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold transition-colors ${
+                      location.pathname === s.path
+                        ? isDarkMode ? 'bg-[#333333] text-white' : 'bg-[#f1f1f1] text-[#1a1a1a]'
+                        : isDarkMode
+                          ? 'text-neutral-300 hover:bg-[#333333] hover:text-white'
+                          : 'text-[#474747] hover:bg-[#f1f1f1] hover:text-[#1a1a1a]'
+                    }`}
+                  >
+                    <s.icon className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                    <span className="truncate">{s.label}</span>
+                  </Link>
                 ))}
               </div>
-            ))
-          )}
-        </nav>
-
-        {/* Account Footer with Dark Mode Switcher & Session State */}
-        <div className={`p-4 border-t shrink-0 ${isDarkMode ? 'border-neutral-800 bg-neutral-900/50' : 'border-neutral-200 bg-[#faf9f5]'}`}>
-          {/* User Profile Card */}
-          <div className={`flex items-center gap-3 px-3 py-2.5 mb-3 rounded-xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-neutral-200'} shadow-sm`}>
-            <div className="h-8 w-8 rounded-full bg-[#2d472c] text-white flex items-center justify-center font-bold text-xs">
-              {user?.name?.charAt(0) || 'A'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold truncate text-neutral-900 dark:text-white">{user?.name || 'Nuva Lead Officer'}</p>
-              <p className="text-[10px] text-neutral-500 truncate">{user?.role === 'admin' ? 'Super Administrator' : 'Staff Admin'}</p>
-            </div>
-            <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-          </div>
-
-          {/* Controls: Theme & Logout */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleDarkMode}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                isDarkMode ? 'border-neutral-700 hover:bg-neutral-800 text-amber-300' : 'border-neutral-200 hover:bg-neutral-100 text-neutral-700'
-              }`}
-              title="Toggle Theme"
-            >
-              {isDarkMode ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-              <span>{isDarkMode ? 'Light' : 'Dark'}</span>
-            </button>
+            )}
 
             <button
-              onClick={handleLogout}
-              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-rose-200 dark:border-rose-900/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-semibold transition-colors"
-              title="Sign Out"
+              onClick={() => setSettingsOpen((v) => !v)}
+              aria-expanded={settingsOpen}
+              className={`w-full justify-between ${itemClass(isSettingsRouteActive)}`}
             >
-              <LogOut className="h-3.5 w-3.5" />
-              <span>Exit</span>
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        
-        {/* Top Navbar Header */}
-        <header className={`h-20 border-b flex items-center justify-between px-6 lg:px-8 shrink-0 ${
-          isDarkMode ? 'bg-neutral-900/80 border-neutral-800' : 'bg-white/80 border-neutral-200'
-        } backdrop-blur-md`}>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 transition-colors"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <span className="text-xs font-extrabold text-neutral-600 dark:text-neutral-300 uppercase tracking-widest hidden sm:inline font-display">
-              NUVA · Admin Console
-            </span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Live Storefront Quick Link */}
-            <a
-              href="/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-bold text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors shadow-2xs"
-            >
-              <span>Open Live Store</span>
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-
-            {/* O3 Chamber Status Badge */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className="flex items-center gap-2.5">
+                <Settings className="h-4 w-4 shrink-0 stroke-[1.75]" />
+                <span>Settings</span>
               </span>
-              <span>Aqueous O₃ System Active</span>
-            </div>
+              <ChevronDown className={`h-3.5 w-3.5 text-neutral-400 transition-transform duration-200 ${settingsOpen ? 'rotate-180' : ''}`} />
+            </button>
           </div>
-        </header>
 
-        {/* Dynamic Nested Route View */}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto pb-12">
+        </aside>
+
+        {/* ─────────────────────────────────────────────────────────────
+            3. MAIN CONTENT CANVAS (Full bleed for Website Editor, padded card for other pages)
+        ───────────────────────────────────────────────────────────── */}
+        <main className={`admin-surface flex-1 min-w-0 min-h-0 ${
+          location.pathname === '/admin/editor'
+            ? 'p-0 overflow-hidden'
+            : 'p-3 sm:p-5 lg:p-6 overflow-y-auto overscroll-contain custom-scrollbar'
+        } ${
+          isDarkMode ? 'bg-[#111213]' : 'bg-[#ebebeb]'
+        }`}>
+          <div className={location.pathname === '/admin/editor' ? 'w-full h-full min-h-0' : 'max-w-[1400px] mx-auto pb-12'}>
             <Outlet />
           </div>
         </main>
 
       </div>
+
     </div>
   );
 };
 
 export default AdminLayout;
+
 

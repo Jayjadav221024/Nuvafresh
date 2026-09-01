@@ -6,8 +6,16 @@ import CartDrawer from '../components/common/CartDrawer';
 import FloatingCartBar from '../components/common/FloatingCartBar';
 import AuthModal from '../components/common/AuthModal';
 import FlyToCartOverlay from '../components/common/FlyToCartOverlay';
+import { trackSession, startHeartbeat } from '../lib/analytics';
 
 const StorefrontLayout = () => {
+  // Count this visit once, so the admin's acquisition reports have something
+  // real to read. Storefront only — admin screens are not customer traffic.
+  useEffect(() => {
+    trackSession();
+    return startHeartbeat();
+  }, []);
+
   // Bi-directional click-to-edit communication when embedded in Admin WebsiteEditor iframe
   useEffect(() => {
     const isIframe = window.self !== window.top;

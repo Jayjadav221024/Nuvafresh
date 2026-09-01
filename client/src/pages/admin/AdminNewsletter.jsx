@@ -1,28 +1,57 @@
-import React, { useState } from 'react';
-import { MailCheck, Download, Trash2, Calendar, ShieldCheck } from 'lucide-react';
-
-const SEED_SUBSCRIBERS = [
-  { id: 'sub-1', email: 'ananya.sharma@gmail.com', source: 'Footer Newsletter', date: 'Today, 08:30 AM', status: 'Subscribed' },
-  { id: 'sub-2', email: 'harsh.shah@yahoo.com', source: 'Homepage Popover', date: 'Yesterday', status: 'Subscribed' },
-  { id: 'sub-3', email: 'priya.nair@hotmail.com', source: 'Checkout Opt-in', date: 'Aug 23, 2026', status: 'Subscribed' },
-  { id: 'sub-4', email: 'deepak.patel@gmail.com', source: 'Footer Newsletter', date: 'Aug 20, 2026', status: 'Subscribed' },
-  { id: 'sub-5', email: 'sanjana.desai@outlook.com', source: 'Blog Post Sidebar', date: 'Aug 17, 2026', status: 'Subscribed' },
-];
+import React, { useState, useEffect } from 'react';
+import { MailCheck, Download, Loader2, AlertCircle } from 'lucide-react';
+import API from '../../api/axiosInstance';
 
 const AdminNewsletter = () => {
-  const [subscribers, setSubscribers] = useState(SEED_SUBSCRIBERS);
+  const [subscribers, setSubscribers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const handleUnsubscribe = (id) => {
-    setSubscribers(subscribers.filter(s => s.id !== id));
+  const load = async () => {
+    try {
+      const { data } = await API.get('/admin/newsletter');
+      if (data.success) setSubscribers(data.subscribers || []);
+      setError('');
+    } catch (e) {
+      setError(e?.response?.data?.message || 'Could not load subscribers.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const formatDate = (value) =>
+    value ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  /* Opting someone out has to reach the database. Dropping the row from local
+     state alone meant the address stayed subscribed on the server. */
+  const handleUnsubscribe = async (subscriber) => {
+    if (!window.confirm(`Unsubscribe ${subscriber.email}?`)) return;
+
+    const previous = subscribers;
+    setSubscribers(subscribers.map(s =>
+      s._id === subscriber._id ? { ...s, status: 'Unsubscribed' } : s
+    ));
+
+    try {
+      await API.patch(`/admin/newsletter/${subscriber._id}/status`, { status: 'Unsubscribed' });
+    } catch (e) {
+      setSubscribers(previous);
+      setError(e?.response?.data?.message || 'Could not update that subscriber.');
+    }
   };
 
   const handleExportCSV = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + ["Email,Source,Subscribed Date,Status"].concat(subscribers.map(s => `${s.email},${s.source},${s.date},${s.status}`)).join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "nuva_newsletter_subscribers.csv");
+    const rows = subscribers.map(s =>
+      [s.email, s.source || 'Footer', formatDate(s.createdAt), s.status].join(',')
+    );
+    const csvContent = 'data:text/csv;charset=utf-8,'
+      + ['Email,Source,Subscribed Date,Status', ...rows].join('\n');
+
+    const link = document.createElement('a');
+    link.setAttribute('href', encodeURI(csvContent));
+    link.setAttribute('download', 'nuva_newsletter_subscribers.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -51,6 +80,13 @@ const AdminNewsletter = () => {
         </button>
       </div>
 
+      {error && (
+        <div className="flex items-start gap-2 px-4 py-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs font-semibold">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-px" />
+          <span>{error}</span>
+        </div>
+      )}
+
       {/* Table */}
       <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -65,34 +101,62 @@ const AdminNewsletter = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {subscribers.map((sub) => (
-                <tr key={sub.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                  <td className="py-4 font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                    <MailCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>{sub.email}</span>
-                  </td>
-                  <td className="py-4 text-neutral-600 dark:text-neutral-400 font-medium">
-                    {sub.source}
-                  </td>
-                  <td className="py-4 text-neutral-500 font-mono text-[11px]">
-                    {sub.date}
-                  </td>
-                  <td className="py-4">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      {sub.status}
-                    </span>
-                  </td>
-                  <td className="py-4 text-right">
-                    <button
-                      onClick={() => handleUnsubscribe(sub.id)}
-                      className="text-xs text-neutral-400 hover:text-rose-600 transition-colors"
-                      title="Remove Subscriber"
-                    >
-                      Unsubscribe
-                    </button>
+              {loading && (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-neutral-500">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                    Loading subscribers…
                   </td>
                 </tr>
-              ))}
+              )}
+
+              {!loading && subscribers.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-neutral-500">
+                    <MailCheck className="h-6 w-6 mx-auto mb-2 text-neutral-300" />
+                    <p className="font-semibold text-neutral-700 dark:text-neutral-300">No subscribers yet</p>
+                    <p className="text-[11px] mt-1">Footer and checkout opt-ins land here.</p>
+                  </td>
+                </tr>
+              )}
+
+              {!loading && subscribers.map((sub) => {
+                const active = sub.status === 'Subscribed';
+                return (
+                  <tr key={sub._id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                    <td className="py-4 font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                      <MailCheck className={`h-4 w-4 shrink-0 ${active ? 'text-emerald-600' : 'text-neutral-400'}`} />
+                      <span>{sub.email}</span>
+                    </td>
+                    <td className="py-4 text-neutral-600 dark:text-neutral-400 font-medium">
+                      {sub.source || 'Footer'}
+                    </td>
+                    <td className="py-4 text-neutral-500 font-mono text-[11px]">
+                      {formatDate(sub.createdAt)}
+                    </td>
+                    <td className="py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        active
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                          : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
+                      }`}>
+                        {sub.status}
+                      </span>
+                    </td>
+                    <td className="py-4 text-right">
+                      {active && (
+                        <button
+                          onClick={() => handleUnsubscribe(sub)}
+                          className="text-xs text-neutral-400 hover:text-rose-600 transition-colors"
+                          title="Opt this address out"
+                        >
+                          Unsubscribe
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

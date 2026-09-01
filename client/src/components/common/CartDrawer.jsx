@@ -8,6 +8,7 @@ import {
 import { useCart } from '../../hooks/useCart';
 import { useAuth } from '../../hooks/useAuth';
 import API from '../../api/axiosInstance';
+import { getSessionId, markCheckoutStarted } from '../../lib/analytics';
 import PaymentModal from './PaymentModal';
 
 // Recommended upsell products matching the exact catalog in screenshot
@@ -136,7 +137,9 @@ const CartDrawer = () => {
     try {
       const { data } = await API.post('/admin/coupons/validate', {
         code: coupon,
-        cartTotal: subtotal
+        cartTotal: subtotal,
+        // Needed by discounts that require a minimum quantity of items.
+        cartQuantity: cart.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0)
       });
       if (data.success && data.coupon) {
         setDiscount(data.coupon.discountAmount);
@@ -146,20 +149,14 @@ const CartDrawer = () => {
         setCouponError(data.message || 'Invalid coupon code');
       }
     } catch (err) {
-      const codeUpper = coupon.toUpperCase().trim();
-      if (codeUpper === 'WELCOME10') {
-        const discountValue = Math.round(subtotal * 0.10);
-        setDiscount(discountValue);
-        setCouponApplied(true);
-        setCouponError('');
-      } else if (codeUpper === 'OZONEPURITY' || codeUpper === 'NUVAO3') {
-        const discountValue = subtotal >= 999 ? 100 : Math.round(subtotal * 0.15);
-        setDiscount(discountValue);
-        setCouponApplied(true);
-        setCouponError('');
-      } else {
-        setCouponError(err.response?.data?.message || 'Invalid coupon. Try WELCOME10');
-      }
+      // The discount API is the only authority. Hard-coded fallback codes used
+      // to be honoured here, which meant a code the merchant had expired or
+      // deleted in the admin still discounted the cart.
+      setCouponError(
+        err.response?.data?.message || 'We could not verify that code. Please try again.'
+      );
+      setDiscount(0);
+      setCouponApplied(false);
     } finally {
       setCouponLoading(false);
     }
@@ -170,6 +167,8 @@ const CartDrawer = () => {
       openAuthModal('login');
       return;
     }
+    // Moves this visitor into "Checking out" on the admin's Live View.
+    markCheckoutStarted();
     setIsPaymentModalOpen(true);
   };
 
@@ -192,12 +191,21 @@ const CartDrawer = () => {
         unit: item.unit,
         image: item.images?.[0] || item.image
       })),
+      // The admin order summary breaks the total into these parts, so send
+      // the same numbers the customer just saw rather than re-deriving them.
+      subtotal,
+      shippingCost: subtotal > 499 ? 0 : 40,
+      shippingMethod: 'Local Delivery',
       totalAmount: finalAmount,
       discountApplied: discount,
+      discountCode: couponApplied ? coupon.toUpperCase().trim() : '',
       paymentMethod: paymentResult.paymentMethod || 'UPI Instant QR Pay',
       transactionId: paymentResult.transactionId,
       utrNumber: paymentResult.utrNumber,
       orderNote: orderNote,
+      customerNote: orderNote,
+      // Credits this sale to the referrer that brought the visit in.
+      sessionId: getSessionId(),
       deliveryAddress: {
         name: user?.name || 'Customer',
         street: '4th Floor, Pancham Icon, Vasna Rd',

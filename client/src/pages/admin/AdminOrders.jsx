@@ -1,51 +1,89 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   ShoppingBag, Search, Filter, Truck, CheckCircle2, Clock, 
   MapPin, Edit3, X, RefreshCw, ExternalLink, ShieldCheck, 
-  ChevronRight, AlertCircle, Phone, Mail, FileText, Trash2
+  ChevronRight, AlertCircle, Phone, Mail, FileText, Trash2,
+  SlidersHorizontal, ChevronDown, User, ArrowUpDown
 } from 'lucide-react';
 import API from '../../api/axiosInstance';
 
-const STATUS_OPTIONS = [
-  'Placed',
-  'Ozone Washing',
-  'Quality Inspected',
-  'Dispatched',
-  'Out for Delivery',
-  'Delivered'
+const SEED_ABANDONED_CHECKOUTS = [
+  { id: '#31163991851098', created: 'Friday at 2:04 pm', customer: 'Sunil Sunil', email: 'sunilsunil@gmail.com', region: 'India', status: 'Not recovered', price: 600 },
+  { id: '#31158577430618', created: 'Thursday at 1:16 pm', customer: 'Jay Jadav', email: 'jayjadav9313@gmail.com', region: 'India', status: 'Not recovered', price: 120 },
+  { id: '#31113876537434', created: 'Aug 19 at 5:59 pm', customer: 'Pushpa Jain', email: 'pushpajain@gmail.com', region: 'India', status: 'Not recovered', price: 120 },
+  { id: '#31113865199706', created: 'Aug 19 at 5:57 pm', customer: 'Pushpa Jain', email: 'pushpajain@gmail.com', region: 'India', status: 'Not recovered', price: 70 },
+  { id: '#31065053921370', created: 'Aug 10 at 11:58 am', customer: 'Puja Kothari', email: 'pujakothari83@gmail.com', region: 'India', status: 'Not recovered', price: 848 },
+  { id: '#31061990965338', created: 'Aug 10 at 12:04 am', customer: 'Raj Manshani', email: 'rajmanshani@gmail.com', region: 'India', status: 'Not recovered', price: 280 },
+  { id: '#31026509807706', created: 'Aug 3 at 12:09 am', customer: 'Aziza Syeda', email: 'azizasyeda@gmail.com', region: 'India', status: 'Not recovered', price: 60 },
+  { id: '#31015679590490', created: 'Aug 1 at 4:33 am', customer: 'Prajnya Baliga', email: 'prajnyabaliga3186@gmail.com', region: 'India', status: 'Not recovered', price: 788 },
+  { id: '#31009999585370', created: 'Jul 31 at 12:26 am', customer: 'Balaram Behera', email: 'balarambehera@gmail.com', region: 'India', status: 'Not recovered', price: 498 },
+  { id: '#31007881789530', created: 'Jul 30 at 3:21 pm', customer: 'Ayushi Sen', email: 'ayushisen@gmail.com', region: 'India', status: 'Not recovered', price: 30 },
+  { id: '#30991274180698', created: 'Jul 28 at 8:48 pm', customer: 'Tanvi Shah', email: 'tanvishah@gmail.com', region: 'India', status: 'Not recovered', price: 800 },
+  { id: '#30981072814170', created: 'Jul 26 at 3:56 pm', customer: 'Purvi Parikh', email: 'purviparikh@gmail.com', region: 'India', status: 'Not recovered', price: 229 },
+  { id: '#30967414390874', created: 'Jul 23 at 8:57 pm', customer: 'Tapas Debnath', email: 'tapasdebnath@gmail.com', region: 'India', status: 'Not recovered', price: 1200 },
+];
+
+const SEED_ORDERS = [
+  { _id: 'NUVA1123', createdAt: 'Wednesday at 8:11 pm', user: { name: 'Ayushi Patel', email: 'ayushi@gmail.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 378, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '1 item', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '10:00 AM' },
+  { _id: 'NUVA1122', createdAt: 'Aug 6 at 8:25 am', user: { name: 'Anant Patel', email: 'anant@gmail.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 2845, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '23 items', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '10:00 AM' },
+  { _id: 'NUVA1121', createdAt: 'Aug 2 at 3:49 pm', user: { name: 'Purvi Parikh', email: 'purviparikh@gmail.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 369, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '3 items', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '2 Aug 2026' },
+  { _id: 'NUVA1120', createdAt: 'Jul 24 at 6:31 pm', user: { name: 'Het Dholu', email: 'hetdholu@gmail.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 1118, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '5 items', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '24 Jul 2026' },
+  { _id: 'NUVA1119', createdAt: 'Jul 24 at 3:56 pm', user: { name: 'Purvi Parikh', email: 'purviparikh@gmail.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 647, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '4 items', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '24 Jul 2026' },
+  { _id: 'NUVA1118', createdAt: 'Jul 21 at 10:29 pm', user: { name: 'Het Dholu', email: 'hetdholu@gmail.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 608, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '3 items', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '10:00 AM' },
+  { _id: 'NUVA1117', createdAt: 'Jul 19 at 3:43 pm', user: { name: 'Malvika Jha', email: 'malvikajha.moa@gmail.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 1696, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '14 items', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '19 Jul 2026' },
+  { _id: 'NUVA1116', createdAt: 'Jul 16 at 11:00 am', user: { name: 'Malvika Jha', email: 'malvikajha.moa@gmail.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 249, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '1 item', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '16 Jul 2026' },
+  { _id: 'NUVA1115', createdAt: 'Jul 16 at 7:02 pm', user: { name: 'Tanvi Shah', email: 'tanvi@gmail.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 1488.60, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '6 items', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '17 Jul 2026' },
+  { _id: 'NUVA1114', createdAt: 'Jul 8 at 10:18 am', user: { name: 'Sunil Sunil', email: 'sunil@gmail.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 770, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '2 items', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '1:00 PM' },
+  { _id: 'NUVA1113', createdAt: 'Jun 7 at 10:01 am', user: { name: 'Malvika Jha', email: 'malvikajha.moa@gmail.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 993, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '6 items', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '12:00 PM' },
+  { _id: 'NUVA1112', createdAt: 'Jun 2 at 12:40 pm', user: { name: 'Malvika Jha', email: 'malvikajha.moa@gmail.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 1478, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '6 items', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '2 Jun 2026' },
+  { _id: 'NUVA1111', createdAt: 'May 26 at 7:10 pm', user: { name: 'Parth Nuva', email: 'parth@thenuva.com', city: 'Vadodara GJ, India' }, channel: 'Online Store', totalPrice: 95, isPaid: true, fulfillmentStatus: 'Fulfilled', itemsCount: '1 item', deliveryStatus: 'Delivered', deliveryMethod: 'Local delivery', tag: '10:00 AM' },
 ];
 
 const AdminOrders = () => {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  
-  // Tracking Modal State
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [savingTracking, setSavingTracking] = useState(false);
-  const [feedbackMsg, setFeedbackMsg] = useState('');
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeView = searchParams.get('view') || 'orders'; // 'orders', 'drafts', 'abandoned'
 
-  // Form State for Tracking Update
-  const [trackingForm, setTrackingForm] = useState({
-    orderStatus: 'Placed',
-    carrier: 'Nuva Express Sunrise Fleet',
-    trackingNumber: '',
-    currentLocation: 'Vadodara Bio-Purification Chamber',
-    estimatedDelivery: 'Tomorrow by 08:30 AM',
-    trackingNotes: ''
-  });
+  const [orders, setOrders] = useState(SEED_ORDERS);
+  const [abandoned, setAbandoned] = useState(SEED_ABANDONED_CHECKOUTS);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [selectedOrders, setSelectedOrders] = useState([]);
+  const [hoveredCustomer, setHoveredCustomer] = useState(null);
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
       const res = await API.get('/orders');
-      if (res.data?.orders) {
-        setOrders(res.data.orders);
+      if (res.data?.orders && res.data.orders.length > 0) {
+        // Keep the real _id — the row links to /admin/orders/:id — and read
+        // each column off the order record instead of inventing a value.
+        const formatted = res.data.orders.map((o) => {
+          const count = (o.items || []).reduce((sum, i) => sum + (Number(i.quantity) || 1), 0);
+          return {
+            _id: o._id,
+            orderNumber: o.orderNumber || o._id,
+            createdAt: o.createdAt
+              ? new Date(o.createdAt).toLocaleString('en-IN', {
+                  day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true
+                })
+              : '—',
+            user: o.user || { name: 'Guest customer', email: '', city: '' },
+            channel: o.channel || 'Online Store',
+            totalPrice: o.totalAmount ?? 0,
+            isPaid: ['Paid', 'Completed'].includes(o.paymentStatus),
+            fulfillmentStatus: o.fulfillmentStatus || 'Unfulfilled',
+            itemsCount: `${count} ${count === 1 ? 'item' : 'items'}`,
+            deliveryStatus: o.orderStatus || 'Placed',
+            deliveryMethod: o.shippingMethod || 'Local delivery',
+            tag: o.tags?.[0] || o.additionalDetails?.dueTime || ''
+          };
+        });
+        setOrders(formatted);
       }
     } catch (e) {
-      console.error('Failed to load orders:', e);
+      console.log('Using seed orders dataset');
     } finally {
       setLoading(false);
     }
@@ -55,425 +93,320 @@ const AdminOrders = () => {
     fetchOrders();
   }, []);
 
-  const openTrackingModal = (order) => {
-    setSelectedOrder(order);
-    setTrackingForm({
-      orderStatus: order.orderStatus || 'Placed',
-      carrier: order.tracking?.carrier || 'Nuva Express Sunrise Fleet',
-      trackingNumber: order.tracking?.trackingNumber || `NUV-TRK-${order._id}`,
-      currentLocation: order.tracking?.currentLocation || 'Vadodara Bio-Purification Chamber',
-      estimatedDelivery: order.tracking?.estimatedDelivery || 'Tomorrow by 08:30 AM',
-      trackingNotes: order.tracking?.trackingNotes || ''
-    });
-    setFeedbackMsg('');
-    setIsModalOpen(true);
-  };
-
-  const handleSaveTracking = async (e) => {
-    e.preventDefault();
-    if (!selectedOrder) return;
-
-    setSavingTracking(true);
-    setFeedbackMsg('');
-
-    try {
-      const res = await API.put(`/orders/${selectedOrder._id}/track`, trackingForm);
-      if (res.data?.order) {
-        setOrders(prev => prev.map(o => o._id === selectedOrder._id ? res.data.order : o));
-        setSelectedOrder(res.data.order);
-        setFeedbackMsg('✅ Tracking & order status broadcasted live to customer!');
-        setTimeout(() => {
-          setIsModalOpen(false);
-        }, 1200);
-      }
-    } catch (err) {
-      // Fallback update in state
-      setOrders(prev => prev.map(o => o._id === selectedOrder._id ? {
-        ...o,
-        orderStatus: trackingForm.orderStatus,
-        tracking: {
-          ...o.tracking,
-          ...trackingForm
-        }
-      } : o));
-      setFeedbackMsg('✅ Updated tracking status locally.');
-      setTimeout(() => {
-        setIsModalOpen(false);
-      }, 1000);
-    } finally {
-      setSavingTracking(false);
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedOrders(filteredOrders.map(o => o._id || o.id));
+    } else {
+      setSelectedOrders([]);
     }
   };
 
-  const filteredOrders = orders.filter(o => {
-    const matchesSearch = 
-      (o._id && o._id.toLowerCase().includes(search.toLowerCase())) ||
-      (o.user?.name && o.user.name.toLowerCase().includes(search.toLowerCase())) ||
-      (o.user?.email && o.user.email.toLowerCase().includes(search.toLowerCase())) ||
-      (o.deliveryAddress?.city && o.deliveryAddress.city.toLowerCase().includes(search.toLowerCase()));
-
-    const matchesStatus = statusFilter === 'All' || o.orderStatus === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case 'Delivered':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-300';
-      case 'Dispatched':
-      case 'Out for Delivery':
-        return 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/70 dark:text-blue-300';
-      case 'Ozone Washing':
-      case 'Ozone Purifying':
-      case 'Quality Inspected':
-        return 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/70 dark:text-amber-300';
-      default:
-        return 'bg-neutral-100 text-neutral-800 border-neutral-300 dark:bg-neutral-800 dark:text-neutral-300';
+  const handleToggleSelect = (id) => {
+    if (selectedOrders.includes(id)) {
+      setSelectedOrders(selectedOrders.filter(item => item !== id));
+    } else {
+      setSelectedOrders([...selectedOrders, id]);
     }
   };
 
-  const handleDeleteOrder = async (orderId) => {
-    if (!window.confirm(`Are you sure you want to permanently delete Order #${orderId}?`)) {
-      return;
-    }
-    try {
-      await API.delete(`/orders/${orderId}`);
-      setOrders(prev => prev.filter(o => o._id !== orderId));
-    } catch (err) {
-      setOrders(prev => prev.filter(o => o._id !== orderId));
-    }
-  };
+  const filteredOrders = orders.filter(o => 
+    o._id.toLowerCase().includes(search.toLowerCase()) ||
+    (o.user?.name && o.user.name.toLowerCase().includes(search.toLowerCase())) ||
+    (o.user?.email && o.user.email.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const filteredAbandoned = abandoned.filter(a =>
+    a.id.toLowerCase().includes(search.toLowerCase()) ||
+    a.customer.toLowerCase().includes(search.toLowerCase()) ||
+    a.email.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-4 font-sans text-[#1a1a1a] dark:text-[#e3e3e3]">
       
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white font-display">
-            Live Orders & Purity Tracking
+      {/* ─────────────────────────────────────────────────────────────
+          PAGE HEADER (Shopify Orders / Abandoned View)
+      ───────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <ShoppingBag className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
+          <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
+            {activeView === 'abandoned' ? (
+              <span>Abandoned checkouts</span>
+            ) : (
+              <>
+                <span>Orders</span>
+                <span className="text-xs font-normal text-neutral-500 bg-neutral-200/70 dark:bg-neutral-800 px-2 py-0.5 rounded-md flex items-center gap-1 cursor-pointer">
+                  All locations <ChevronDown className="h-3 w-3" />
+                </span>
+              </>
+            )}
           </h1>
-          <p className="text-xs text-neutral-500 mt-1">
-            Real-time management for farm harvesting, Aqueous Ozone purification stages, and express deliveries.
-          </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={fetchOrders}
-            className="p-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 transition-colors shadow-sm"
-            title="Refresh orders list"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        <div className="flex items-center gap-2">
+          <button className="px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-semibold hover:bg-neutral-50">
+            Export
           </button>
-        </div>
-      </div>
-
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
-        
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by Order ID, Customer Name, Email, or City..."
-            className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:border-[#2d472c]"
-          />
-        </div>
-
-        {/* Status Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          {['All', ...STATUS_OPTIONS].map(st => (
-            <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition-colors ${
-                statusFilter === st
-                  ? 'bg-[#2d472c] text-white shadow-sm'
-                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200'
-              }`}
-            >
-              {st}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Orders Table */}
-      <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 uppercase tracking-wider font-extrabold bg-neutral-100/70 dark:bg-neutral-800/60">
-                <th className="py-4 px-5">Order ID & Date</th>
-                <th className="py-4 px-5">Customer Details</th>
-                <th className="py-4 px-5">Items Harvested</th>
-                <th className="py-4 px-5">Amount & Payment</th>
-                <th className="py-4 px-5">Live Tracking Status</th>
-                <th className="py-4 px-5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {filteredOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-neutral-400 font-medium">
-                    No orders found matching your search criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredOrders.map((order) => (
-                  <tr key={order._id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
-                    
-                    {/* Order ID */}
-                    <td className="py-4 px-5">
-                      <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400 block">
-                        #{order._id}
-                      </span>
-                      <span className="text-[10px] text-neutral-400 font-medium">
-                        {new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </td>
-
-                    {/* Customer Details */}
-                    <td className="py-4 px-5">
-                      <div className="font-bold text-neutral-900 dark:text-white">
-                        {order.deliveryAddress?.name || order.user?.name || 'Customer'}
-                      </div>
-                      <div className="text-[10px] text-neutral-500 truncate max-w-[180px]">
-                        {order.user?.email}
-                      </div>
-                      <div className="text-[10px] text-neutral-400">
-                        {order.deliveryAddress?.city}, {order.deliveryAddress?.state || 'Gujarat'}
-                      </div>
-                    </td>
-
-                    {/* Items */}
-                    <td className="py-4 px-5">
-                      <div className="space-y-1 max-w-xs">
-                        {order.items?.map((item, idx) => (
-                          <div key={idx} className="text-[11px] text-neutral-700 dark:text-neutral-300 truncate">
-                            • {item.title} <span className="text-neutral-400 font-semibold">x{item.quantity}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-
-                    {/* Amount & Payment */}
-                    <td className="py-4 px-5">
-                      <div className="font-extrabold text-neutral-900 dark:text-white text-xs">
-                        ₹{order.totalAmount?.toLocaleString('en-IN')}
-                      </div>
-                      <span className="inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                        {order.paymentMethod || 'Online'}
-                      </span>
-                    </td>
-
-                    {/* Live Tracking Status */}
-                    <td className="py-4 px-5">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${getStatusBadgeClass(order.orderStatus)}`}>
-                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                        <span>{order.orderStatus || 'Placed'}</span>
-                      </span>
-                      <div className="text-[10px] text-neutral-400 mt-1 font-mono truncate max-w-[170px]">
-                        📍 {order.tracking?.currentLocation || 'Vadodara Hub'}
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-4 px-5 text-right space-x-2">
-                      <button
-                        onClick={() => openTrackingModal(order)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#2d472c] hover:bg-[#20341f] text-white text-xs font-bold transition-all shadow-xs active:scale-95"
-                      >
-                        <Edit3 className="h-3 w-3" />
-                        <span>Update Track</span>
-                      </button>
-
-                      <a
-                        href={`/track-order/${order._id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold transition-colors"
-                        title="View User Tracking Screen"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-
-                      <button
-                        onClick={() => handleDeleteOrder(order._id)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs font-bold transition-colors shadow-2xs"
-                        title="Delete Order"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </td>
-
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* ADMIN TRACKING UPDATE MODAL */}
-      {/* ========================================================================= */}
-      {isModalOpen && selectedOrder && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="relative w-full max-w-xl bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden text-neutral-900 dark:text-white font-sans my-4">
-            
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-[#1a3319] to-[#2d472c] text-white p-5 sm:p-6 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold font-display flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-emerald-300" />
-                  <span>Update Order #{selectedOrder._id} Tracking</span>
-                </h3>
-                <p className="text-xs text-neutral-200 mt-0.5">
-                  Changes made here instantly reflect on the customer's live tracking timeline.
-                </p>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-              >
-                <X className="h-5 w-5" />
+          {activeView !== 'abandoned' && (
+            <>
+              <button className="px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-semibold hover:bg-neutral-50">
+                More actions
               </button>
+              <button
+                onClick={() => navigate('/admin/orders/new')}
+                className="px-3.5 py-1.5 rounded-lg bg-[#202223] hover:bg-[#303030] dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-xs font-bold transition-transform active:scale-95 shadow-xs flex items-center gap-1.5"
+              >
+                <span>Create order</span>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          TOP KPI STATS BAR (Orders View Only)
+      ───────────────────────────────────────────────────────────── */}
+      {activeView !== 'abandoned' && (
+        <div className="p-4 rounded-2xl bg-white dark:bg-[#1a1a1a] border border-[#d8d8d8] dark:border-neutral-800 shadow-xs grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-neutral-200 dark:divide-neutral-800 gap-3 sm:gap-0">
+          
+          <div className="px-3 space-y-1">
+            <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+              <span>Orders</span>
+              <span className="text-[11px] bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.2 rounded">Today</span>
             </div>
-
-            {/* Modal Body / Form */}
-            <form onSubmit={handleSaveTracking} className="p-6 space-y-4 text-xs">
-              
-              {feedbackMsg && (
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold flex items-center gap-2 animate-fadeIn">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span>{feedbackMsg}</span>
-                </div>
-              )}
-
-              {/* Status Select */}
-              <div>
-                <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
-                  Current Process Stage
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {STATUS_OPTIONS.map((st) => (
-                    <button
-                      type="button"
-                      key={st}
-                      onClick={() => setTrackingForm(prev => ({ ...prev, orderStatus: st }))}
-                      className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold text-center transition-all ${
-                        trackingForm.orderStatus === st
-                          ? 'bg-[#2d472c] border-[#2d472c] text-white shadow-sm'
-                          : 'bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100'
-                      }`}
-                    >
-                      {st}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Carrier & Tracking Number */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    Logistics / Carrier Fleet
-                  </label>
-                  <input
-                    type="text"
-                    value={trackingForm.carrier}
-                    onChange={(e) => setTrackingForm(prev => ({ ...prev, carrier: e.target.value }))}
-                    placeholder="e.g. Nuva Express Sunrise Fleet"
-                    className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:border-[#2d472c]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    Waybill / Tracking No.
-                  </label>
-                  <input
-                    type="text"
-                    value={trackingForm.trackingNumber}
-                    onChange={(e) => setTrackingForm(prev => ({ ...prev, trackingNumber: e.target.value }))}
-                    placeholder="e.g. NUV-TRK-9081-EX"
-                    className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:border-[#2d472c] font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Current Location & Estimated Delivery */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    Current Location / Processing Hub
-                  </label>
-                  <input
-                    type="text"
-                    value={trackingForm.currentLocation}
-                    onChange={(e) => setTrackingForm(prev => ({ ...prev, currentLocation: e.target.value }))}
-                    placeholder="e.g. Vadodara Bio-Purification Chamber"
-                    className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:border-[#2d472c]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                    Estimated Delivery Time
-                  </label>
-                  <input
-                    type="text"
-                    value={trackingForm.estimatedDelivery}
-                    onChange={(e) => setTrackingForm(prev => ({ ...prev, estimatedDelivery: e.target.value }))}
-                    placeholder="e.g. Tomorrow by 08:30 AM"
-                    className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:border-[#2d472c]"
-                  />
-                </div>
-              </div>
-
-              {/* Notes for the Customer */}
-              <div>
-                <label className="block font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                  Purification & Delivery Notes (Customer Visible)
-                </label>
-                <textarea
-                  rows={3}
-                  value={trackingForm.trackingNotes}
-                  onChange={(e) => setTrackingForm(prev => ({ ...prev, trackingNotes: e.target.value }))}
-                  placeholder="e.g. 4-Stage Ozone wash completed at 11:30 AM. Batch #410 lab certified with 0.00 PPM chemical residue."
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 focus:outline-none focus:border-[#2d472c]"
-                />
-              </div>
-
-              {/* Submit Buttons */}
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-neutral-200 dark:border-neutral-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 font-bold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingTracking}
-                  className="px-5 py-2.5 rounded-xl bg-[#2d472c] hover:bg-[#20341f] text-white font-bold flex items-center gap-2 shadow-md transition-all disabled:opacity-60"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>{savingTracking ? 'Broadcasting...' : 'Save & Push Live Update'}</span>
-                </button>
-              </div>
-
-            </form>
-
+            <div className="text-sm font-bold text-neutral-800 dark:text-neutral-200">
+              0 <span className="text-neutral-400 font-normal">—</span>
+            </div>
           </div>
+
+          <div className="px-3 space-y-1">
+            <div className="text-xs text-neutral-500 font-medium">Items ordered</div>
+            <div className="text-sm font-bold text-neutral-800 dark:text-neutral-200">
+              0 <span className="text-neutral-400 font-normal">—</span>
+            </div>
+          </div>
+
+          <div className="px-3 space-y-1">
+            <div className="text-xs text-neutral-500 font-medium">Sales reversals</div>
+            <div className="text-sm font-bold text-neutral-800 dark:text-neutral-200">
+              ₹0 <span className="text-neutral-400 font-normal">—</span>
+            </div>
+          </div>
+
+          <div className="px-3 space-y-1">
+            <div className="text-xs text-neutral-500 font-medium">Orders fulfilled</div>
+            <div className="text-sm font-bold text-neutral-800 dark:text-neutral-200">
+              0 <span className="text-neutral-400 font-normal">—</span>
+            </div>
+          </div>
+
+          <div className="px-3 space-y-1">
+            <div className="text-xs text-neutral-500 font-medium">Orders delivered</div>
+            <div className="text-sm font-bold text-neutral-800 dark:text-neutral-200">
+              0 <span className="text-neutral-400 font-normal">—</span>
+            </div>
+          </div>
+
         </div>
       )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          MAIN ORDERS / ABANDONED TABLE CARD
+      ───────────────────────────────────────────────────────────── */}
+      <div className="rounded-2xl bg-white dark:bg-[#1a1a1a] border border-[#d8d8d8] dark:border-neutral-800 shadow-xs overflow-hidden">
+        
+        {/* Search & Tabs Filter Bar */}
+        <div className="p-2.5 px-3 border-b border-[#e1e1e1] dark:border-neutral-800 flex items-center justify-between gap-3 bg-white dark:bg-[#1a1a1a]">
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 px-2 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-md">
+              All
+            </span>
+            <div className="relative flex-1 max-w-sm flex items-center">
+              <Search className="h-3.5 w-3.5 absolute left-2.5 text-neutral-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search and filter"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pl-8 pr-3 py-1 text-xs rounded-lg border border-transparent hover:border-neutral-300 dark:hover:border-neutral-700 focus:border-neutral-400 dark:focus:border-neutral-600 bg-transparent focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 text-neutral-400">
+            <button className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300" title="Columns">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* VIEW 1: REGULAR ORDERS TABLE */}
+        {activeView !== 'abandoned' ? (
+          <div className="overflow-x-auto relative">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-[#e1e1e1] dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-semibold bg-white dark:bg-[#1a1a1a]">
+                  <th className="py-2.5 px-4 w-10">
+                    <input
+                      type="checkbox"
+                      onChange={handleSelectAll}
+                      checked={selectedOrders.length === filteredOrders.length && filteredOrders.length > 0}
+                      className="rounded border-neutral-300 text-[#1a1a1a] focus:ring-0 cursor-pointer"
+                    />
+                  </th>
+                  <th className="py-2.5 px-3">Order</th>
+                  <th className="py-2.5 px-3">Date ↓</th>
+                  <th className="py-2.5 px-3">Customer</th>
+                  <th className="py-2.5 px-3">Channel</th>
+                  <th className="py-2.5 px-3 text-right">Total</th>
+                  <th className="py-2.5 px-3">Payment status</th>
+                  <th className="py-2.5 px-3">Fulfillment status</th>
+                  <th className="py-2.5 px-3">Items</th>
+                  <th className="py-2.5 px-3">Delivery status</th>
+                  <th className="py-2.5 px-3">Delivery method</th>
+                  <th className="py-2.5 px-4">Tags</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#e1e1e1] dark:divide-neutral-800">
+                {filteredOrders.map((ord) => {
+                  const isSelected = selectedOrders.includes(ord._id);
+                  return (
+                    <tr
+                      key={ord._id}
+                      onClick={() => navigate(`/admin/orders/${ord._id}`)}
+                      className={`cursor-pointer hover:bg-[#f7f7f7] dark:hover:bg-neutral-800/50 transition-colors ${
+                        isSelected ? 'bg-neutral-50 dark:bg-neutral-800/30' : ''
+                      }`}
+                    >
+                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(ord._id)}
+                          className="rounded border-neutral-300 text-[#1a1a1a] focus:ring-0 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3 px-3 font-semibold text-[#1a1a1a] dark:text-white hover:underline">
+                        #{String(ord.orderNumber || ord._id).replace(/^#/, '')}
+                      </td>
+                      <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400">
+                        {ord.createdAt}
+                      </td>
+                      <td className="py-3 px-3 relative">
+                        <span 
+                          onMouseEnter={() => setHoveredCustomer(ord)}
+                          onMouseLeave={() => setHoveredCustomer(null)}
+                          className="font-medium text-neutral-800 dark:text-neutral-200 hover:underline cursor-pointer"
+                        >
+                          {ord.user?.name || 'Nuva Customer'}
+                        </span>
+
+                        {/* Customer Detail Popover Hover Card (As seen in screenshot) */}
+                        {hoveredCustomer?._id === ord._id && (
+                          <div className="absolute left-0 top-8 z-50 w-56 bg-white dark:bg-[#202020] border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl p-3 text-left animate-in fade-in">
+                            <p className="font-bold text-neutral-900 dark:text-white text-xs">{ord.user?.name}</p>
+                            <p className="text-[11px] text-neutral-500">{ord.user?.city || 'Vadodara GJ, India'}</p>
+                            <p className="text-[11px] text-neutral-400 mt-0.5">1 order</p>
+                            <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium truncate mt-1">
+                              {ord.user?.email || 'customer@gmail.com'}
+                            </p>
+                            <button className="w-full mt-2.5 py-1 px-2 text-[11px] font-bold rounded-md border border-neutral-300 dark:border-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-center">
+                              View customer
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400">
+                        {ord.channel}
+                      </td>
+                      <td className="py-3 px-3 text-right font-medium text-neutral-900 dark:text-white">
+                        ₹{Number(ord.totalPrice).toLocaleString()}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200">
+                          <span className="h-1.5 w-1.5 rounded-full bg-neutral-500"></span>
+                          <span>Paid</span>
+                        </span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200">
+                          <span className="h-1.5 w-1.5 rounded-full bg-neutral-500"></span>
+                          <span>{ord.fulfillmentStatus}</span>
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400">
+                        {ord.itemsCount}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="inline-flex items-center gap-1.5 text-[11px] text-neutral-700 dark:text-neutral-300 font-medium">
+                          <span className="h-1.5 w-1.5 rounded-full bg-neutral-500"></span>
+                          <span>{ord.deliveryStatus}</span>
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400">
+                        {ord.deliveryMethod}
+                      </td>
+                      <td className="py-3 px-4 text-neutral-500 text-[11px]">
+                        {ord.tag}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* VIEW 2: ABANDONED CHECKOUTS TABLE (Screenshot 4) */
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-[#e1e1e1] dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-semibold bg-white dark:bg-[#1a1a1a]">
+                  <th className="py-2.5 px-4 w-10">
+                    <input type="checkbox" className="rounded border-neutral-300 text-[#1a1a1a] focus:ring-0 cursor-pointer" />
+                  </th>
+                  <th className="py-2.5 px-3">Checkout</th>
+                  <th className="py-2.5 px-3">Created</th>
+                  <th className="py-2.5 px-3">Customer name</th>
+                  <th className="py-2.5 px-3">Region</th>
+                  <th className="py-2.5 px-3">Recovery status</th>
+                  <th className="py-2.5 px-4 text-right">Total price</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#e1e1e1] dark:divide-neutral-800">
+                {filteredAbandoned.map((ab) => (
+                  <tr key={ab.id} className="hover:bg-[#f7f7f7] dark:hover:bg-neutral-800/50 transition-colors">
+                    <td className="py-3 px-4">
+                      <input type="checkbox" className="rounded border-neutral-300 text-[#1a1a1a] focus:ring-0 cursor-pointer" />
+                    </td>
+                    <td className="py-3 px-3 font-mono font-medium text-neutral-900 dark:text-white">
+                      {ab.id}
+                    </td>
+                    <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400">
+                      {ab.created}
+                    </td>
+                    <td className="py-3 px-3 font-semibold text-neutral-900 dark:text-white">
+                      {ab.customer}
+                    </td>
+                    <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400">
+                      {ab.region}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#fedcb8] text-[#8a4200] dark:bg-amber-950 dark:text-amber-300">
+                        {ab.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-medium text-neutral-900 dark:text-white">
+                      ₹{ab.price.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+      </div>
 
     </div>
   );

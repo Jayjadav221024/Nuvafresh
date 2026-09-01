@@ -1,262 +1,336 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Film, Sparkles, X, Save, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Film, Plus, Search, Pencil, Trash2, Loader2, Play } from 'lucide-react';
 import API from '../../api/axiosInstance';
+import {
+  PageHeader, PrimaryButton, SecondaryButton, IconButton, ErrorBanner,
+  TabBar, TableCard, LoadingRow, EmptyRow, Pagination, Modal, Field,
+  inputClass, controlBase
+} from '../../components/admin/ui';
+
+/* ═══════════════════════════════════════════════════════════════════
+   VIDEO REELS
+   The shoppable 9:16 clips the homepage feed plays. Same table chrome as
+   the rest of the Content section, with a poster thumbnail standing in
+   for the video so the list stays quick.
+═══════════════════════════════════════════════════════════════════ */
+const PAGE_SIZE = 10;
+
+const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
+
+const blankForm = () => ({
+  title: '',
+  videoUrl: '',
+  productTitle: '',
+  productPrice: '',
+  poster: ''
+});
 
 const AdminReels = () => {
   const [reels, setReels] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [editingReel, setEditingReel] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [page, setPage] = useState(1);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(blankForm());
+  const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState(null);
 
-  const [formData, setFormData] = useState({
-    title: '',
-    videoUrl: '',
-    productTitle: '',
-    productPrice: ''
-  });
-
-  const fetchReels = async () => {
+  const load = async () => {
     try {
-      setLoading(true);
       const { data } = await API.get('/reels');
-      if (data.success && data.reels) {
-        setReels(data.reels);
-      }
+      if (data.success && data.reels) setReels(data.reels);
+      setError('');
     } catch (e) {
-      console.warn('Reels fetch fallback', e);
+      setError('Could not load reels.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchReels();
-  }, []);
+  useEffect(() => { load(); }, []);
+  useEffect(() => { setPage(1); }, [search]);
 
-  const handleOpenModal = (item = null) => {
-    if (item) {
-      setEditingReel(item);
-      setFormData({
-        title: item.title || '',
-        videoUrl: item.videoUrl || '',
-        productTitle: item.productTitle || '',
-        productPrice: item.productPrice || ''
-      });
-    } else {
-      setEditingReel(null);
-      setFormData({
-        title: '',
-        videoUrl: '',
-        productTitle: '',
-        productPrice: ''
-      });
-    }
-    setIsModalOpen(true);
+  const open = (reel) => {
+    setEditing(reel || 'new');
+    setForm(reel ? { ...blankForm(), ...reel } : blankForm());
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
+  const save = async () => {
+    if (!form.title.trim() || !form.videoUrl.trim()) {
+      setError('A reel needs a title and a video URL.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+
     const payload = {
-      ...formData,
-      productPrice: Number(formData.productPrice) || 99,
+      ...form,
+      productPrice: Number(form.productPrice) || 0,
       isFeatured: true
     };
 
-    if (editingReel) {
-      try {
-        const { data } = await API.put(`/reels/${editingReel._id}`, payload);
-        if (data.success && data.reel) {
-          setReels(reels.map(r => r._id === editingReel._id ? data.reel : r));
-        } else {
-          setReels(reels.map(r => r._id === editingReel._id ? { ...r, ...payload } : r));
-        }
-      } catch (err) {
-        setReels(reels.map(r => r._id === editingReel._id ? { ...r, ...payload } : r));
-      }
-    } else {
-      try {
+    try {
+      if (editing === 'new') {
         const { data } = await API.post('/reels', payload);
-        if (data.success && data.reel) {
-          setReels([data.reel, ...reels]);
-        } else {
-          setReels([{ _id: `reel-${Date.now()}`, ...payload }, ...reels]);
-        }
-      } catch (err) {
-        setReels([{ _id: `reel-${Date.now()}`, ...payload }, ...reels]);
+        setReels([data?.reel || { _id: `reel-${Date.now()}`, ...payload }, ...reels]);
+      } else {
+        const { data } = await API.put(`/reels/${editing._id}`, payload);
+        setReels(reels.map((r) => (r._id === editing._id ? (data?.reel || { ...r, ...payload }) : r)));
       }
-    }
-
-    setIsModalOpen(false);
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Delete this video reel from storefront?')) {
-      try {
-        await API.delete(`/reels/${id}`);
-        setReels(reels.filter(r => r._id !== id));
-      } catch (e) {
-        setReels(reels.filter(r => r._id !== id));
-      }
+      setEditing(null);
+    } catch (e) {
+      setError(e.response?.data?.message || 'Could not save that reel.');
+    } finally {
+      setSaving(false);
     }
   };
+
+  const remove = async (reel) => {
+    if (!window.confirm(`Delete "${reel.title}" from the storefront feed?`)) return;
+    const previous = reels;
+    setReels(reels.filter((r) => r._id !== reel._id));
+    try {
+      await API.delete(`/reels/${reel._id}`);
+    } catch (e) {
+      setReels(previous);
+      setError(e.response?.data?.message || 'Could not delete that reel.');
+    }
+  };
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return reels.filter((r) =>
+      !q || [r.title, r.productTitle].some((v) => String(v || '').toLowerCase().includes(q))
+    );
+  }, [reels, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div className="space-y-8 font-sans">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-950 font-display">Shoppable Video Reels Manager</h1>
-          <p className="text-sm text-secondary-700">Manage 9:16 vertical farm harvest clips, headline overlays, and linked produce products</p>
+    <div className="space-y-4 font-sans text-[#1a1a1a] dark:text-[#e3e3e3]">
+      <PageHeader icon={Film} title="Video reels" count={reels.length}>
+        <PrimaryButton onClick={() => open(null)}>
+          <Plus className="h-3.5 w-3.5" />
+          Add reel
+        </PrimaryButton>
+      </PageHeader>
+
+      <ErrorBanner message={error} onDismiss={() => setError('')} />
+
+      <TableCard>
+        <TabBar tabs={[{ key: 'all', label: 'All' }]} active="all" onChange={() => {}}>
+          {showSearch ? (
+            <input
+              autoFocus
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onBlur={() => !search && setShowSearch(false)}
+              placeholder="Search reels"
+              className={`${controlBase} w-48 py-1`}
+            />
+          ) : (
+            <IconButton onClick={() => setShowSearch(true)} title="Search">
+              <Search className="h-3.5 w-3.5" />
+            </IconButton>
+          )}
+        </TabBar>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-[#e1e1e1] dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-semibold">
+                <th className="py-2.5 px-4 w-16" />
+                <th className="py-2.5 px-3">Reel</th>
+                <th className="py-2.5 px-3">Linked product</th>
+                <th className="py-2.5 px-3 text-right">Price</th>
+                <th className="py-2.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#e1e1e1] dark:divide-neutral-800">
+              {loading && <LoadingRow colSpan={5} label="Loading reels…" />}
+
+              {!loading && rows.length === 0 && (
+                <EmptyRow
+                  colSpan={5}
+                  icon={Film}
+                  title={search ? 'No reels match that search' : 'No reels yet'}
+                  hint="Vertical 9:16 clips added here play in the homepage shoppable feed."
+                  action={
+                    !search && (
+                      <PrimaryButton onClick={() => open(null)}>
+                        <Plus className="h-3.5 w-3.5" />
+                        Add reel
+                      </PrimaryButton>
+                    )
+                  }
+                />
+              )}
+
+              {!loading && rows.map((reel) => (
+                <tr
+                  key={reel._id}
+                  onClick={() => open(reel)}
+                  className="cursor-pointer hover:bg-[#f7f7f7] dark:hover:bg-neutral-800/50 transition-colors"
+                >
+                  <td className="py-2 px-4" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => setPreview(reel)}
+                      title="Play preview"
+                      className="relative h-12 w-9 rounded-md overflow-hidden bg-neutral-900 border border-neutral-200 dark:border-neutral-700 group"
+                    >
+                      {reel.poster ? (
+                        <img src={reel.poster} alt="" className="h-full w-full object-cover opacity-80" />
+                      ) : (
+                        <span className="absolute inset-0 bg-neutral-800" />
+                      )}
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <Play className="h-3.5 w-3.5 text-white fill-white/80 group-hover:scale-110 transition-transform" />
+                      </span>
+                    </button>
+                  </td>
+                  <td className="py-3 px-3 max-w-[320px]">
+                    <span className="block font-semibold text-[#1a1a1a] dark:text-white truncate">
+                      {reel.title}
+                    </span>
+                    <span className="block text-[11px] text-neutral-500 truncate">{reel.videoUrl}</span>
+                  </td>
+                  <td className="py-3 px-3 text-neutral-700 dark:text-neutral-300">
+                    {reel.productTitle || '—'}
+                  </td>
+                  <td className="py-3 px-3 text-right font-semibold text-neutral-900 dark:text-white tabular-nums">
+                    {reel.productPrice ? money(reel.productPrice) : '—'}
+                  </td>
+                  <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      <IconButton onClick={() => open(reel)} title="Edit"><Pencil className="h-3.5 w-3.5" /></IconButton>
+                      <IconButton onClick={() => remove(reel)} title="Delete" danger><Trash2 className="h-3.5 w-3.5" /></IconButton>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <button
-          onClick={() => handleOpenModal(null)}
-          className="btn-primary flex items-center gap-2 text-sm px-4 py-2.5 shadow-sm"
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={filtered.length}
+          pageSize={PAGE_SIZE}
+          onChange={setPage}
+          unit="reels"
+        />
+      </TableCard>
+
+      {/* ── Editor ── */}
+      {editing && (
+        <Modal
+          title={editing === 'new' ? 'Add video reel' : 'Edit video reel'}
+          onClose={() => setEditing(null)}
+          footer={
+            <>
+              <SecondaryButton onClick={() => setEditing(null)} disabled={saving}>Cancel</SecondaryButton>
+              <PrimaryButton onClick={save} disabled={saving || !form.title.trim() || !form.videoUrl.trim()}>
+                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {saving ? 'Saving…' : 'Save reel'}
+              </PrimaryButton>
+            </>
+          }
         >
-          <Plus className="h-4 w-4" />
-          <span>Upload New Video Reel</span>
-        </button>
-      </div>
-
-      {/* Reels Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {reels.map((reel) => (
-          <div key={reel._id} className="p-5 rounded-2xl bg-white border border-secondary-200 shadow-sm space-y-4 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-primary-700 flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
-                <Sparkles className="h-3.5 w-3.5 text-emerald-600" /> 
-                <span>Shoppable Reel</span>
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleOpenModal(reel)}
-                  className="p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-100 transition-colors"
-                  title="Edit Reel Text & Video"
-                >
-                  <Edit2 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(reel._id)}
-                  className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors"
-                  title="Delete Reel"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            
-            {/* 9:16 Vertical Video Container with Fallback Poster */}
-            <div className="aspect-[9/14] rounded-xl overflow-hidden bg-neutral-950 relative border border-neutral-800 shadow-inner group">
-              <video 
-                src={reel.videoUrl} 
-                poster={reel.poster || 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600'}
-                loop 
-                muted 
-                autoPlay 
-                playsInline 
-                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" 
+          <div className="space-y-3">
+            <Field label="Headline" required>
+              <input
+                type="text"
+                autoFocus
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                placeholder="e.g. Dawn hydro spinach harvesting"
+                className={inputClass}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
-              <div className="absolute bottom-3 left-3 right-3 text-white text-xs space-y-1">
-                <p className="font-bold font-display truncate drop-shadow-md">{reel.title}</p>
-                <p className="text-[11px] text-emerald-300 font-semibold drop-shadow-md">₹{reel.productPrice} • {reel.productTitle}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+            </Field>
 
-      {/* Create / Edit Reel Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-neutral-200 overflow-hidden">
-            <div className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between bg-[#fbfbfa]">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
-                  <Film className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-neutral-900 font-display">
-                    {editingReel ? 'Edit Shoppable Video Reel' : 'Add New Shoppable Video Reel'}
-                  </h3>
-                  <p className="text-xs text-neutral-500">Edit headline, product details, price, and video source stream</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+            <Field label="Video URL" required hint="MP4 or WebM. Paste a link from Files, or any hosted stream.">
+              <input
+                type="url"
+                value={form.videoUrl}
+                onChange={(e) => setForm({ ...form, videoUrl: e.target.value })}
+                placeholder="https://…/video.mp4"
+                className={inputClass}
+              />
+            </Field>
 
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5">Reel Headline Title</label>
+            <Field label="Poster image" hint="Shown before the clip plays. Optional.">
+              <input
+                type="url"
+                value={form.poster}
+                onChange={(e) => setForm({ ...form, poster: e.target.value })}
+                placeholder="https://…/poster.jpg"
+                className={inputClass}
+              />
+            </Field>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Linked product">
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. Dawn Hydro Spinach Harvesting"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full bg-white border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500"
+                  value={form.productTitle}
+                  onChange={(e) => setForm({ ...form, productTitle: e.target.value })}
+                  placeholder="e.g. Hydro-cleaned baby spinach"
+                  className={inputClass}
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-neutral-700 mb-1.5">Video URL (MP4 / WebM / S3 stream)</label>
+              </Field>
+              <Field label="Price (₹)">
                 <input
-                  type="url"
-                  required
-                  placeholder="https://.../video.mp4"
-                  value={formData.videoUrl}
-                  onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
-                  className="w-full bg-white border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500"
+                  type="number"
+                  min="0"
+                  value={form.productPrice}
+                  onChange={(e) => setForm({ ...form, productPrice: e.target.value })}
+                  placeholder="79"
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+
+            {form.videoUrl && (
+              <div className="pt-1">
+                <p className="text-[11px] text-neutral-500 mb-1.5">Preview</p>
+                <video
+                  key={form.videoUrl}
+                  src={form.videoUrl}
+                  poster={form.poster || undefined}
+                  controls
+                  muted
+                  playsInline
+                  className="w-32 aspect-[9/16] object-cover rounded-xl border border-[#e1e1e1] dark:border-neutral-800 bg-neutral-900"
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1.5">Linked Product Title</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Hydro-Cleaned Baby Spinach"
-                    value={formData.productTitle}
-                    onChange={(e) => setFormData({ ...formData, productTitle: e.target.value })}
-                    className="w-full bg-white border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1.5">Price (₹)</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="79"
-                    value={formData.productPrice}
-                    onChange={(e) => setFormData({ ...formData, productPrice: e.target.value })}
-                    className="w-full bg-white border border-neutral-300 rounded-xl px-3.5 py-2.5 text-xs text-neutral-900 focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 flex items-center justify-end gap-2 border-t border-neutral-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-neutral-200 text-xs font-semibold text-neutral-600 hover:bg-neutral-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary flex items-center gap-1.5 text-xs px-5 py-2.5 rounded-xl"
-                >
-                  <Save className="h-4 w-4" />
-                  <span>{editingReel ? 'Save Changes' : 'Publish Reel'}</span>
-                </button>
-              </div>
-            </form>
+            )}
           </div>
-        </div>
+        </Modal>
+      )}
+
+      {/* ── Play preview from the list ── */}
+      {preview && (
+        <Modal title={preview.title} onClose={() => setPreview(null)} width="max-w-sm">
+          <video
+            src={preview.videoUrl}
+            poster={preview.poster || undefined}
+            controls
+            autoPlay
+            playsInline
+            className="w-full aspect-[9/16] object-cover rounded-xl bg-neutral-900"
+          />
+          {preview.productTitle && (
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-3">
+              {preview.productTitle}
+              {preview.productPrice ? ` · ${money(preview.productPrice)}` : ''}
+            </p>
+          )}
+        </Modal>
       )}
     </div>
   );

@@ -1,20 +1,63 @@
 import React, { useState, useEffect } from 'react';
-import { Star, CheckCircle, EyeOff, ShieldCheck, Search, Filter } from 'lucide-react';
+import { Star, ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
 import API from '../../api/axiosInstance';
-
-const SEED_REVIEWS = [
-  { _id: 'r-1', productTitle: 'Desi Gir Cow A2 Bilona Cultured Ghee (500ml)', customerName: 'Aarav Mehta', rating: 5, title: 'Incredible aroma and pure golden granulations!', comment: 'The aroma when opening the jar is authentic Vedic bilona. Nothing like store bought ghee.', status: 'Approved', createdAt: '2026-08-24' },
-  { _id: 'r-2', productTitle: 'Hydro-Cleaned Crisp Baby Spinach', customerName: 'Pooja Sharma', rating: 5, title: 'Super fresh, zero dirt or pesticides', comment: 'Leaves were crisp and completely ready to eat. Very happy with the ozone wash purity.', status: 'Approved', createdAt: '2026-08-23' },
-  { _id: 'r-3', productTitle: 'Wood Cold-Pressed Mustard Oil', customerName: 'Ramesh Patel', rating: 4, title: 'Great strong aroma for pickles', comment: 'Authentic kachi ghani pungency. Delivered in glass bottle nicely packed.', status: 'Pending', createdAt: '2026-08-25' },
-  { _id: 'r-4', productTitle: 'Ancient Emmer Khapli Wheat Atta', customerName: 'Neha Dave', rating: 5, title: 'Rotis stay soft for hours', comment: 'Extremely easy to digest. Great for diabetic diet.', status: 'Approved', createdAt: '2026-08-21' },
-];
+import { STORE_TOPICS, publishStoreChange } from '../../lib/storeSync';
 
 const AdminReviews = () => {
-  const [reviews, setReviews] = useState(SEED_REVIEWS);
+  const [reviews, setReviews] = useState([]);
   const [filter, setFilter] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState(null);
 
-  const handleStatusChange = (id, newStatus) => {
+  const load = async () => {
+    try {
+      const { data } = await API.get('/admin/reviews');
+      if (data.success) setReviews(data.reviews || []);
+      setError('');
+    } catch (e) {
+      setError(e?.response?.data?.message || 'Could not load reviews.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  /* Approving here publishes the review onto the product page, so the
+     storefront is told to refetch as soon as the write lands. */
+  const handleStatusChange = async (id, newStatus) => {
+    const previous = reviews;
+    setBusyId(id);
     setReviews(reviews.map(r => r._id === id ? { ...r, status: newStatus } : r));
+
+    try {
+      await API.patch(`/admin/reviews/${id}/status`, { status: newStatus });
+      publishStoreChange(STORE_TOPICS.REVIEWS);
+    } catch (e) {
+      setReviews(previous);
+      setError(e?.response?.data?.message || 'Could not update that review.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDelete = async (rev) => {
+    if (!window.confirm(`Delete the review from ${rev.customerName}? This cannot be undone.`)) return;
+
+    const previous = reviews;
+    setBusyId(rev._id);
+    setReviews(reviews.filter(r => r._id !== rev._id));
+
+    try {
+      await API.delete(`/admin/reviews/${rev._id}`);
+      publishStoreChange(STORE_TOPICS.REVIEWS);
+    } catch (e) {
+      setReviews(previous);
+      setError(e?.response?.data?.message || 'Could not delete that review.');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const filtered = filter === 'All' ? reviews : reviews.filter(r => r.status === filter);
@@ -49,6 +92,13 @@ const AdminReviews = () => {
         </div>
       </div>
 
+      {error && (
+        <div className="flex items-start gap-2 px-4 py-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs font-semibold">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-px" />
+          <span>{error}</span>
+        </div>
+      )}
+
       {/* Reviews Table */}
       <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -65,7 +115,30 @@ const AdminReviews = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {filtered.map((rev) => (
+              {loading && (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-neutral-500">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                    Loading reviews…
+                  </td>
+                </tr>
+              )}
+
+              {!loading && filtered.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-neutral-500">
+                    <ShieldCheck className="h-6 w-6 mx-auto mb-2 text-neutral-300" />
+                    <p className="font-semibold text-neutral-700 dark:text-neutral-300">
+                      {filter === 'All' ? 'No customer reviews yet' : `No ${filter.toLowerCase()} reviews`}
+                    </p>
+                    <p className="text-[11px] mt-1">
+                      Reviews submitted on a product page land here for moderation.
+                    </p>
+                  </td>
+                </tr>
+              )}
+
+              {!loading && filtered.map((rev) => (
                 <tr key={rev._id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                   <td className="py-4 font-bold text-neutral-900 dark:text-white max-w-[180px] truncate">
                     {rev.productTitle}
@@ -85,7 +158,7 @@ const AdminReviews = () => {
                     <p className="text-neutral-500 text-[11px] line-clamp-2 mt-0.5">{rev.comment}</p>
                   </td>
                   <td className="py-4 text-neutral-400 font-mono text-[11px]">
-                    {rev.createdAt}
+                    {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                   </td>
                   <td className="py-4">
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
@@ -98,7 +171,8 @@ const AdminReviews = () => {
                     {rev.status !== 'Approved' && (
                       <button
                         onClick={() => handleStatusChange(rev._id, 'Approved')}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-sm"
+                        disabled={busyId === rev._id}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-sm disabled:opacity-50"
                       >
                         Approve
                       </button>
@@ -106,11 +180,20 @@ const AdminReviews = () => {
                     {rev.status !== 'Hidden' && (
                       <button
                         onClick={() => handleStatusChange(rev._id, 'Hidden')}
-                        className="px-2.5 py-1 rounded-lg bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 text-neutral-700 dark:text-neutral-300 text-[11px] font-medium"
+                        disabled={busyId === rev._id}
+                        className="px-2.5 py-1 rounded-lg bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 text-neutral-700 dark:text-neutral-300 text-[11px] font-medium disabled:opacity-50"
                       >
                         Hide
                       </button>
                     )}
+                    <button
+                      onClick={() => handleDelete(rev)}
+                      disabled={busyId === rev._id}
+                      className="px-2.5 py-1 rounded-lg text-neutral-400 hover:text-rose-600 text-[11px] font-medium disabled:opacity-50"
+                      title="Delete permanently"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}

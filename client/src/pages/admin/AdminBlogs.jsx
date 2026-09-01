@@ -1,488 +1,527 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  BookOpen, Plus, Search, Edit2, Trash2, CheckCircle2, Eye, EyeOff, Sparkles, X, Image, Tag, Calendar
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  SquarePen, Plus, Search, Trash2, ArrowUpDown, SlidersHorizontal,
+  ChevronLeft, ChevronRight, X, Loader2, AlertCircle, Image as ImageIcon
 } from 'lucide-react';
 import API from '../../api/axiosInstance';
+import { STORE_TOPICS, publishStoreChange } from '../../lib/storeSync';
 
-const INITIAL_BLOGS = [
-  {
-    _id: 'b-1',
-    id: 'ghee-7-checks',
-    title: 'How to Identify Pure Cow Ghee: 7 Things to Check',
-    category: 'Food & Health',
-    author: 'Nuva Nutrition',
-    publishedAt: '2026-08-19',
-    status: 'Published',
-    views: 1420,
-    tags: ['a2 cow ghee', 'Vedic traditions', 'Living Soil'],
-    bannerImage: 'https://images.unsplash.com/photo-1589927986089-35812388d1f4?w=800&auto=format&fit=crop&q=80',
-    excerpt: "My dadi used to say a house without ghee in the dabba is not really running a kitchen at all. Growing up we'd get one spoon on hot dal...",
-    content: "Pure cow ghee made with the ancient Bilona method has distinct aroma, golden graininess, and high nutritional density without preservatives."
-  },
-  {
-    _id: 'b-2',
-    id: 'avocado-weight-management',
-    title: 'Avocado for Weight Management: What You Should Know',
-    category: 'Food & Health',
-    author: 'Nuva Nutrition',
-    publishedAt: '2026-08-10',
-    status: 'Published',
-    views: 980,
-    tags: ['healthy fats', 'weight loss', 'superfoods'],
-    bannerImage: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=800&auto=format&fit=crop&q=80',
-    excerpt: 'When consumed in moderate amounts, avocado can be a great choice for a person trying to lose weight. The presence of good fat...',
-    content: "Monounsaturated fatty acids in avocados help regulate metabolism and support long-lasting satiety throughout the day."
-  },
-  {
-    _id: 'b-3',
-    id: 'benefits-of-black-rice',
-    title: '10 Science-Backed Health Benefits of Black Rice',
-    category: 'Staples & Grains',
-    author: 'Nuva Nutrition',
-    publishedAt: '2026-07-30',
-    status: 'Published',
-    views: 2150,
-    tags: ['ancient grains', 'anthocyanins', 'gluten-free'],
-    bannerImage: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&auto=format&fit=crop&q=80',
-    excerpt: 'Black rice is not just an eye-catching version of plain white rice; it is also highly nutritious. This rice has its distinctive black color due to...',
-    content: "Rich in powerful anthocyanin antioxidants, black rice aids cardiovascular vitality and maintains healthy blood sugar indices."
-  }
-];
+/* ═══════════════════════════════════════════════════════════════════
+   BLOG POSTS
+   Shopify's article list: the post, whether the storefront can see it,
+   who wrote it, which blog it's filed under, and when it last moved.
+═══════════════════════════════════════════════════════════════════ */
+const PAGE_SIZE = 10;
 
-const AdminBlogs = () => {
-  const [blogs, setBlogs] = useState(INITIAL_BLOGS);
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingBlog, setEditingBlog] = useState(null);
-  const [tagInput, setTagInput] = useState('');
+const formatDateTime = (value) => {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('en-IN', {
+    day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true
+  }).replace(',', ' at');
+};
 
-  const fetchBlogs = async () => {
+const formatDate = (value) => {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const SecondaryButton = ({ children, className = '', ...props }) => (
+  <button
+    type="button"
+    {...props}
+    className={`px-3 py-1.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-semibold text-neutral-900 dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700 disabled:opacity-50 transition-colors flex items-center gap-1.5 ${className}`}
+  >
+    {children}
+  </button>
+);
+
+/* ── Manage blogs: the publications a post can be filed under ── */
+const ManageBlogsModal = ({ publications, onClose, onChanged }) => {
+  const [rows, setRows] = useState(publications);
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const refresh = async () => {
     try {
-      const { data } = await API.get('/blogs');
-      if (data.success && data.blogs && data.blogs.length > 0) {
-        setBlogs(data.blogs);
-      }
+      const { data } = await API.get('/blogs/publications');
+      setRows(data.publications || []);
+      onChanged(data.publications || []);
+    } catch (e) { /* the list on screen stays as it is */ }
+  };
+
+  const add = async () => {
+    const title = draft.trim();
+    if (!title) return;
+    setBusy(true);
+    setError('');
+    try {
+      await API.post('/blogs/publications', { title });
+      setDraft('');
+      await refresh();
     } catch (e) {
-      console.warn('Using local blog state fallback', e);
+      setError(e.response?.data?.message || 'Could not create that blog.');
+    } finally {
+      setBusy(false);
     }
   };
 
-  useEffect(() => {
-    fetchBlogs();
-  }, []);
-
-  const [formData, setFormData] = useState({
-    title: '',
-    category: 'Food & Health',
-    author: 'Nuva Nutrition',
-    status: 'Published',
-    bannerImage: '',
-    tags: [],
-    excerpt: '',
-    content: ''
-  });
-
-  const handleOpenModal = (blog = null) => {
-    if (blog) {
-      setEditingBlog(blog);
-      setFormData(blog);
-    } else {
-      setEditingBlog(null);
-      setFormData({
-        title: '',
-        category: 'Food & Health',
-        author: 'Nuva Nutrition',
-        status: 'Published',
-        bannerImage: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800&auto=format&fit=crop&q=80',
-        tags: ['Chemical-Free', 'Ozone-Washed'],
-        excerpt: '',
-        content: ''
-      });
-    }
-    setIsModalOpen(true);
-  };
-
-  const handleAddTag = (e) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      if (!formData.tags.includes(tagInput.trim())) {
-        setFormData({ ...formData, tags: [...formData.tags, tagInput.trim()] });
-      }
-      setTagInput('');
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove) => {
-    setFormData({ ...formData, tags: formData.tags.filter(t => t !== tagToRemove) });
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    if (editingBlog) {
-      try {
-        await API.put(`/blogs/${editingBlog._id || editingBlog.id}`, formData);
-      } catch (err) {}
-      setBlogs(blogs.map(b => (b._id === editingBlog._id || b.id === editingBlog.id) ? { ...b, ...formData } : b));
-    } else {
-      const payload = {
-        ...formData,
-        publishedAt: new Date().toISOString().split('T')[0],
-        views: 0
-      };
-      try {
-        const { data } = await API.post('/blogs', payload);
-        if (data.success && data.blog) {
-          setBlogs([data.blog, ...blogs]);
-        } else {
-          setBlogs([{ _id: `b-${Date.now()}`, ...payload }, ...blogs]);
-        }
-      } catch (err) {
-        setBlogs([{ _id: `b-${Date.now()}`, ...payload }, ...blogs]);
-      }
-    }
-    setIsModalOpen(false);
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this blog post?')) {
-      try {
-        await API.delete(`/blogs/${id}`);
-      } catch (err) {}
-      setBlogs(blogs.filter(b => b._id !== id && b.id !== id));
-    }
-  };
-
-  const handleToggleStatus = async (id) => {
-    const target = blogs.find(b => b._id === id || b.id === id);
-    if (!target) return;
-    const newStatus = target.status === 'Published' ? 'Draft' : 'Published';
+  const rename = async (row, title) => {
+    if (!title.trim() || title === row.title) return;
     try {
-      await API.put(`/blogs/${id}`, { status: newStatus });
-    } catch (err) {}
-    setBlogs(blogs.map(b => {
-      if (b._id === id || b.id === id) {
-        return { ...b, status: newStatus };
-      }
-      return b;
-    }));
+      await API.put(`/blogs/publications/${row._id}`, { title: title.trim() });
+      await refresh();
+      publishStoreChange(STORE_TOPICS.BLOGS);
+    } catch (e) {
+      setError(e.response?.data?.message || 'Could not rename that blog.');
+    }
   };
 
-  const filteredBlogs = blogs.filter(b => {
-    const matchSearch = b.title.toLowerCase().includes(search.toLowerCase()) || b.excerpt.toLowerCase().includes(search.toLowerCase());
-    const matchCat = categoryFilter === 'All' || b.category === categoryFilter;
-    return matchSearch && matchCat;
-  });
+  const remove = async (row) => {
+    setError('');
+    try {
+      await API.delete(`/blogs/publications/${row._id}`);
+      await refresh();
+    } catch (e) {
+      setError(e.response?.data?.message || 'Could not delete that blog.');
+    }
+  };
 
   return (
-    <div className="p-6 sm:p-8 space-y-8 font-sans max-w-7xl">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-5">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white font-display">
-            Blog & Article Manager
-          </h1>
-          <p className="text-xs sm:text-sm text-neutral-500 mt-1">
-            Create, edit, and publish clean food research, ancient grain guides, and healthy recipes.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-[#1a1a1a] border border-[#d8d8d8] dark:border-neutral-800 shadow-2xl flex flex-col max-h-[85vh]">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-[#e1e1e1] dark:border-neutral-800">
+          <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Manage blogs</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && add()}
+              placeholder="Add a blog, e.g. Recipes"
+              className="flex-1 px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#1f1f1f] text-xs outline-none focus:border-[#005bd3] focus:ring-1 focus:ring-[#005bd3]"
+            />
+            <SecondaryButton onClick={add} disabled={busy || !draft.trim()}>
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              Add
+            </SecondaryButton>
+          </div>
+
+          {error && (
+            <p className="flex items-start gap-1.5 text-xs text-red-600 dark:text-red-400">
+              <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {error}
+            </p>
+          )}
+
+          <div className="rounded-xl border border-[#e1e1e1] dark:border-neutral-800 divide-y divide-[#e1e1e1] dark:divide-neutral-800">
+            {rows.length === 0 ? (
+              <p className="px-3 py-4 text-xs text-neutral-500 text-center">No blogs yet</p>
+            ) : (
+              rows.map((row) => (
+                <div key={row._id} className="flex items-center gap-2 px-3 py-2">
+                  <input
+                    defaultValue={row.title}
+                    onBlur={(e) => rename(row, e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                    className="flex-1 min-w-0 bg-transparent text-xs font-semibold text-neutral-900 dark:text-white outline-none border border-transparent hover:border-neutral-300 dark:hover:border-neutral-700 focus:border-[#005bd3] rounded-md px-2 py-1"
+                  />
+                  <span className="text-[11px] text-neutral-500 shrink-0">
+                    {row.postCount} {row.postCount === 1 ? 'post' : 'posts'}
+                  </span>
+                  <button
+                    onClick={() => remove(row)}
+                    title={row.postCount > 0 ? 'Move its posts first' : 'Delete blog'}
+                    className="p-1.5 rounded-lg text-neutral-500 hover:text-rose-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-40"
+                    disabled={row.postCount > 0}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+
+          <p className="text-[11px] text-neutral-500 leading-relaxed">
+            Renaming a blog refiles every post in it. A blog that still holds posts can't be
+            deleted — move them somewhere else first.
           </p>
         </div>
 
-        <button
-          onClick={() => handleOpenModal()}
-          className="px-5 py-2.5 rounded-xl bg-[#2d472c] hover:bg-[#20341f] text-white text-xs font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95 shrink-0"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Write New Article</span>
-        </button>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:w-80">
-          <Search className="h-4 w-4 absolute left-3.5 top-3 text-neutral-400" />
-          <input
-            type="text"
-            placeholder="Search articles by title or keyword..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-xs text-neutral-900 dark:text-white focus:ring-1 focus:ring-[#2d472c]"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-          {['All', 'Food & Health', 'Staples & Grains'].map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setCategoryFilter(cat)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-                categoryFilter === cat
-                  ? 'bg-[#2d472c] text-white'
-                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="px-4 py-3 border-t border-[#e1e1e1] dark:border-neutral-800 flex justify-end">
+          <SecondaryButton onClick={onClose}>Done</SecondaryButton>
         </div>
       </div>
+    </div>
+  );
+};
 
-      {/* Blogs Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredBlogs.map((blog) => (
-          <div
-            key={blog.id}
-            className="rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+const AdminBlogs = () => {
+  const navigate = useNavigate();
+
+  const [blogs, setBlogs] = useState([]);
+  const [publications, setPublications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [tab, setTab] = useState('All');
+  const [sortDesc, setSortDesc] = useState(true);
+  const [selected, setSelected] = useState([]);
+  const [page, setPage] = useState(1);
+  const [manageOpen, setManageOpen] = useState(false);
+  const searchRef = useRef(null);
+
+  const load = async () => {
+    try {
+      const [posts, pubs] = await Promise.all([
+        API.get('/blogs?includeHidden=true'),
+        API.get('/blogs/publications').catch(() => ({ data: { publications: [] } }))
+      ]);
+      setBlogs(posts.data.blogs || []);
+      setPublications(pubs.data.publications || []);
+      setError('');
+    } catch (e) {
+      setError(e?.response?.data?.message || 'Could not load blog posts.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const tabs = useMemo(
+    () => ['All', ...publications.map((p) => p.title)],
+    [publications]
+  );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return blogs
+      .filter((b) => tab === 'All' || b.category === tab)
+      .filter((b) =>
+        !q ||
+        b.title?.toLowerCase().includes(q) ||
+        b.author?.toLowerCase().includes(q) ||
+        b.tags?.some((t) => t.toLowerCase().includes(q))
+      )
+      .sort((a, b) => {
+        const at = new Date(a.updatedAt || a.publishedAt || 0);
+        const bt = new Date(b.updatedAt || b.publishedAt || 0);
+        return sortDesc ? bt - at : at - bt;
+      });
+  }, [blogs, tab, search, sortDesc]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [tab, search]);
+
+  const toggleAll = (e) => setSelected(e.target.checked ? pageRows.map((b) => b._id) : []);
+  const toggleOne = (id) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const bulkDelete = async () => {
+    if (!window.confirm(`Delete ${selected.length} post${selected.length === 1 ? '' : 's'}?`)) return;
+    const previous = blogs;
+    setBlogs(blogs.filter((b) => !selected.includes(b._id)));
+    setSelected([]);
+    try {
+      await Promise.all(selected.map((id) => API.delete(`/blogs/${id}`)));
+      publishStoreChange(STORE_TOPICS.BLOGS);
+      load();
+    } catch (e) {
+      setBlogs(previous);
+      setError(e?.response?.data?.message || 'Could not delete those posts.');
+    }
+  };
+
+  const setVisibility = async (blog, status) => {
+    const previous = blogs;
+    setBlogs(blogs.map((b) => (b._id === blog._id ? { ...b, status } : b)));
+    try {
+      await API.put(`/blogs/${blog._id}`, { status });
+      publishStoreChange(STORE_TOPICS.BLOGS);
+    } catch (e) {
+      setBlogs(previous);
+      setError(e?.response?.data?.message || 'Could not change visibility.');
+    }
+  };
+
+  return (
+    <div className="space-y-4 font-sans text-[#1a1a1a] dark:text-[#e3e3e3]">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <SquarePen className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
+          <h1 className="text-xl font-bold tracking-tight">Blog posts</h1>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <SecondaryButton onClick={() => setManageOpen(true)}>
+            <SquarePen className="h-3.5 w-3.5" />
+            Manage blogs
+          </SecondaryButton>
+          <button
+            onClick={() => navigate('/admin/blogs/new')}
+            className="px-3.5 py-1.5 rounded-lg bg-[#202223] hover:bg-[#303030] dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-xs font-bold shadow-xs transition-transform active:scale-95"
           >
-            <div>
-              {/* Banner Image */}
-              <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                <img
-                  src={blog.bannerImage}
-                  alt={blog.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm ${
-                  blog.status === 'Published'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-amber-500 text-white'
-                }`}>
-                  {blog.status}
-                </span>
-                <span className="absolute bottom-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-white text-[10px] font-bold">
-                  {blog.category}
-                </span>
-              </div>
-
-              {/* Text Info */}
-              <div className="p-5 space-y-3">
-                <div className="flex items-center gap-3 text-[11px] text-neutral-400">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {blog.publishedAt}
-                  </span>
-                  <span>•</span>
-                  <span>{blog.views} readers</span>
-                </div>
-
-                <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white line-clamp-2 leading-snug">
-                  {blog.title}
-                </h3>
-
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
-                  {blog.excerpt}
-                </p>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {blog.tags?.map((t) => (
-                    <span
-                      key={t}
-                      className="px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-[10px] font-medium text-neutral-600 dark:text-neutral-300"
-                    >
-                      #{t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Actions Bar */}
-            <div className="p-4 bg-neutral-50 dark:bg-neutral-800/50 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-              <button
-                onClick={() => handleToggleStatus(blog.id)}
-                className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 flex items-center gap-1"
-              >
-                {blog.status === 'Published' ? (
-                  <>
-                    <EyeOff className="h-3.5 w-3.5 text-neutral-400" />
-                    <span>Unpublish</span>
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>Publish</span>
-                  </>
-                )}
-              </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleOpenModal(blog)}
-                  className="p-1.5 rounded-lg text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                  title="Edit Article"
-                >
-                  <Edit2 className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(blog.id)}
-                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors"
-                  title="Delete Article"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-          </div>
-        ))}
+            Add blog post
+          </button>
+        </div>
       </div>
 
-      {/* Add / Edit Blog Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-6">
-            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-4">
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-white font-display">
-                {editingBlog ? 'Edit Blog Article' : 'Write New Blog Article'}
-              </h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-800 dark:hover:text-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1">
-                  Article Title
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g. 7 Checks for Pure A2 Cow Ghee"
-                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-semibold"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1">
-                    Category
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-medium"
-                  >
-                    <option value="Food & Health">Food & Health</option>
-                    <option value="Staples & Grains">Staples & Grains</option>
-                    <option value="Organic Farming">Organic Farming</option>
-                    <option value="Recipes & Lifestyle">Recipes & Lifestyle</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1">
-                    Publish Status
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-medium"
-                  >
-                    <option value="Published">Published</option>
-                    <option value="Draft">Draft</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1">
-                  Banner Image URL
-                </label>
-                <input
-                  type="text"
-                  value={formData.bannerImage}
-                  onChange={(e) => setFormData({ ...formData, bannerImage: e.target.value })}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1">
-                  Tags (Press Enter to add)
-                </label>
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleAddTag}
-                  placeholder="Type tag and press Enter"
-                  className="w-full px-4 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs mb-2"
-                />
-                <div className="flex flex-wrap gap-1.5">
-                  {formData.tags?.map((t) => (
-                    <span
-                      key={t}
-                      className="px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-1.5"
-                    >
-                      <span>#{t}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTag(t)}
-                        className="text-emerald-600 hover:text-emerald-900"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1">
-                  Article Summary / Excerpt
-                </label>
-                <textarea
-                  rows={2}
-                  value={formData.excerpt}
-                  onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
-                  placeholder="Short engaging teaser shown on card previews..."
-                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs resize-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block mb-1">
-                  Full Article Body Content
-                </label>
-                <textarea
-                  rows={6}
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="Write full deep-dive article content..."
-                  className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs resize-none"
-                  required
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-[#2d472c] hover:bg-[#20341f] text-white text-xs font-bold shadow-md transition-transform active:scale-95"
-                >
-                  {editingBlog ? 'Update Article' : 'Publish Article'}
-                </button>
-              </div>
-            </form>
-          </div>
+      {error && (
+        <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300 text-xs font-semibold">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-px" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError('')}><X className="h-3.5 w-3.5" /></button>
         </div>
       )}
 
+      <div className="rounded-2xl bg-white dark:bg-[#1a1a1a] border border-[#d8d8d8] dark:border-neutral-800 shadow-xs overflow-hidden">
+
+        {/* ── Tabs + search ── */}
+        <div className="px-3 py-2 border-b border-[#e1e1e1] dark:border-neutral-800 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-1 min-w-0 overflow-x-auto">
+            {tabs.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition-colors ${
+                  tab === t
+                    ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+            <button
+              onClick={() => setManageOpen(true)}
+              title="Add a blog"
+              className="p-1 rounded-md text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            {showSearch ? (
+              <input
+                ref={searchRef}
+                autoFocus
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onBlur={() => !search && setShowSearch(false)}
+                placeholder="Search posts"
+                className="w-44 px-2.5 py-1 text-xs rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#1f1f1f] outline-none focus:border-[#005bd3]"
+              />
+            ) : (
+              <button
+                onClick={() => setShowSearch(true)}
+                title="Search and filter"
+                className="p-1.5 rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              >
+                <Search className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              title="Columns"
+              className="p-1.5 rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => setSortDesc((v) => !v)}
+              title={sortDesc ? 'Newest first' : 'Oldest first'}
+              className="p-1.5 rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            >
+              <ArrowUpDown className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* ── Bulk bar ── */}
+        {selected.length > 0 && (
+          <div className="px-3 py-2 border-b border-[#e1e1e1] dark:border-neutral-800 bg-[#f7f7f7] dark:bg-[#161616] flex items-center gap-3">
+            <span className="text-xs font-semibold">{selected.length} selected</span>
+            <button
+              onClick={bulkDelete}
+              className="text-xs font-bold text-rose-600 hover:text-rose-700 px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </button>
+          </div>
+        )}
+
+        {/* ── Table ── */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-[#e1e1e1] dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-semibold">
+                <th className="py-2.5 px-4 w-10">
+                  <input
+                    type="checkbox"
+                    onChange={toggleAll}
+                    checked={selected.length === pageRows.length && pageRows.length > 0}
+                    className="rounded border-neutral-300 text-[#1a1a1a] focus:ring-0 cursor-pointer"
+                  />
+                </th>
+                <th className="py-2.5 px-2 w-14" />
+                <th className="py-2.5 px-3">Title</th>
+                <th className="py-2.5 px-3">Visibility</th>
+                <th className="py-2.5 px-3">Author</th>
+                <th className="py-2.5 px-3">Blog</th>
+                <th className="py-2.5 px-3">
+                  <button
+                    onClick={() => setSortDesc((v) => !v)}
+                    className="flex items-center gap-1 hover:text-neutral-900 dark:hover:text-white"
+                  >
+                    Updated <ArrowUpDown className="h-3 w-3" />
+                  </button>
+                </th>
+                <th className="py-2.5 px-4 text-right">Published</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#e1e1e1] dark:divide-neutral-800">
+              {loading && (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-neutral-500">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                    Loading posts…
+                  </td>
+                </tr>
+              )}
+
+              {!loading && pageRows.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="py-14 text-center">
+                    <SquarePen className="h-6 w-6 mx-auto mb-2 text-neutral-400" />
+                    <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      {search || tab !== 'All' ? 'No posts match those filters' : 'No blog posts yet'}
+                    </p>
+                    {!search && tab === 'All' && (
+                      <button
+                        onClick={() => navigate('/admin/blogs/new')}
+                        className="mt-3 px-3.5 py-1.5 rounded-lg bg-[#202223] dark:bg-white text-white dark:text-black text-xs font-bold"
+                      >
+                        Add blog post
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              )}
+
+              {!loading && pageRows.map((b) => {
+                const isSelected = selected.includes(b._id);
+                const visible = (b.status || 'Published') === 'Published';
+                return (
+                  <tr
+                    key={b._id}
+                    onClick={() => navigate(`/admin/blogs/${b._id}`)}
+                    className={`cursor-pointer hover:bg-[#f7f7f7] dark:hover:bg-neutral-800/50 transition-colors ${
+                      isSelected ? 'bg-neutral-50 dark:bg-neutral-800/30' : ''
+                    }`}
+                  >
+                    <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleOne(b._id)}
+                        className="rounded border-neutral-300 text-[#1a1a1a] focus:ring-0 cursor-pointer"
+                      />
+                    </td>
+                    <td className="py-2 px-2">
+                      <div className="h-9 w-12 rounded-md overflow-hidden bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-center">
+                        {b.bannerImage ? (
+                          <img src={b.bannerImage} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <ImageIcon className="h-3.5 w-3.5 text-neutral-400" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 max-w-[280px]">
+                      <span className="font-semibold text-[#1a1a1a] dark:text-white hover:underline line-clamp-2">
+                        {b.title}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => setVisibility(b, visible ? 'Draft' : 'Published')}
+                        title={visible ? 'Hide from the storefront' : 'Show on the storefront'}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors ${
+                          visible
+                            ? 'bg-[#cbf4c9] text-[#0e621d] dark:bg-emerald-950 dark:text-emerald-300 hover:bg-[#b6efb3]'
+                            : 'bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 hover:bg-neutral-300'
+                        }`}
+                      >
+                        {visible ? 'Visible' : 'Hidden'}
+                      </button>
+                    </td>
+                    <td className="py-3 px-3 text-neutral-700 dark:text-neutral-300">
+                      {b.author || 'Nuva Nutrition'}
+                    </td>
+                    <td className="py-3 px-3 text-neutral-700 dark:text-neutral-300">
+                      {b.category || '—'}
+                    </td>
+                    <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400">
+                      {formatDateTime(b.updatedAt || b.publishedAt)}
+                    </td>
+                    <td className="py-3 px-4 text-right text-neutral-600 dark:text-neutral-400">
+                      {visible ? formatDate(b.publishedAt) : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── Pagination ── */}
+        <div className="p-3 border-t border-[#e1e1e1] dark:border-neutral-800 flex items-center gap-1 text-xs text-neutral-500">
+          <button
+            disabled={page === 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            className="p-1 rounded border border-neutral-300 dark:border-neutral-700 disabled:opacity-40"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <button
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            className="p-1 rounded border border-neutral-300 dark:border-neutral-700 disabled:opacity-40"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+          <span className="ml-2 font-medium">
+            {filtered.length === 0
+              ? '0'
+              : `${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
+          </span>
+        </div>
+      </div>
+
+      {manageOpen && (
+        <ManageBlogsModal
+          publications={publications}
+          onClose={() => { setManageOpen(false); load(); }}
+          onChanged={setPublications}
+        />
+      )}
     </div>
   );
 };

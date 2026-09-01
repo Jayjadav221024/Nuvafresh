@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import StorefrontLayout from './layouts/StorefrontLayout';
 import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
+import CollectionsIndexPage from './pages/CollectionsIndexPage';
+import CollectionPage from './pages/CollectionPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import OurStoryPage from './pages/OurStoryPage';
 import OzoneShieldPage from './pages/OzoneShieldPage';
@@ -15,6 +17,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import OrderSuccessPage from './pages/OrderSuccessPage';
 import TrackOrderPage from './pages/TrackOrderPage';
+import MetaobjectEntryPage from './pages/MetaobjectEntryPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import { FullWebsiteSkeleton } from './components/common/Skeleton';
@@ -23,20 +26,34 @@ import { FullWebsiteSkeleton } from './components/common/Skeleton';
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminProducts = lazy(() => import('./pages/admin/AdminProducts'));
+const AdminProductEditor = lazy(() => import('./pages/admin/AdminProductEditor'));
 const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'));
+const AdminOrderCreate = lazy(() => import('./pages/admin/AdminOrderCreate'));
+const AdminOrderDetail = lazy(() => import('./pages/admin/AdminOrderDetail'));
 const AdminReels = lazy(() => import('./pages/admin/AdminReels'));
 const WebsiteEditor = lazy(() => import('./pages/admin/WebsiteEditor'));
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'));
+const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
+const AdminReportDetail = lazy(() => import('./pages/admin/AdminReportDetail'));
+const AdminLiveView = lazy(() => import('./pages/admin/AdminLiveView'));
 const AdminCoupons = lazy(() => import('./pages/admin/AdminCoupons'));
+const AdminDiscountEditor = lazy(() => import('./pages/admin/AdminDiscountEditor'));
 const AdminCustomers = lazy(() => import('./pages/admin/AdminCustomers'));
+const AdminCustomerDetail = lazy(() => import('./pages/admin/AdminCustomerDetail'));
 const AdminCategories = lazy(() => import('./pages/admin/AdminCategories'));
 const AdminInventory = lazy(() => import('./pages/admin/AdminInventory'));
+const AdminTransferCreate = lazy(() => import('./pages/admin/AdminTransferCreate'));
 const AdminReviews = lazy(() => import('./pages/admin/AdminReviews'));
 const AdminInquiries = lazy(() => import('./pages/admin/AdminInquiries'));
 const AdminNewsletter = lazy(() => import('./pages/admin/AdminNewsletter'));
 const AdminAuditLogs = lazy(() => import('./pages/admin/AdminAuditLogs'));
 const AdminRoles = lazy(() => import('./pages/admin/AdminRoles'));
 const AdminBlogs = lazy(() => import('./pages/admin/AdminBlogs'));
+const AdminBlogEditor = lazy(() => import('./pages/admin/AdminBlogEditor'));
+const AdminMetaobjects = lazy(() => import('./pages/admin/AdminMetaobjects'));
+const AdminMetaobjectDefinition = lazy(() => import('./pages/admin/AdminMetaobjectDefinition'));
+const AdminFiles = lazy(() => import('./pages/admin/AdminFiles'));
+const AdminMenus = lazy(() => import('./pages/admin/AdminMenus'));
 const AdminTestimonials = lazy(() => import('./pages/admin/AdminTestimonials'));
 const AdminEmailSetup = lazy(() => import('./pages/admin/AdminEmailSetup'));
 const AdminEmailTemplates = lazy(() => import('./pages/admin/AdminEmailTemplates'));
@@ -49,6 +66,8 @@ const App = () => {
       <Route path="/" element={<StorefrontLayout />}>
         <Route index element={<HomePage />} />
         <Route path="shop" element={<ShopPage />} />
+        <Route path="collections" element={<CollectionsIndexPage />} />
+        <Route path="collections/:handle" element={<CollectionPage />} />
         <Route path="products/:id" element={<ProductDetailPage />} />
         <Route path="our-story" element={<OurStoryPage />} />
         <Route path="about" element={<OurStoryPage />} />
@@ -69,6 +88,9 @@ const App = () => {
         <Route path="track-order" element={<TrackOrderPage />} />
         <Route path="track-order/:id" element={<TrackOrderPage />} />
         <Route path="track" element={<TrackOrderPage />} />
+        {/* Published metaobject entries. The server serves these only for
+            types with "Publish entries as web pages" turned on. */}
+        <Route path="c/:handle/:entryHandle" element={<MetaobjectEntryPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
       </Route>
@@ -86,16 +108,37 @@ const App = () => {
       >
         <Route index element={<AdminDashboard />} />
         <Route path="products" element={<AdminProducts />} />
+        <Route path="products/:id" element={<AdminProductEditor />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="orders/new" element={<AdminOrderCreate />} />
+        <Route path="orders/:id" element={<AdminOrderDetail />} />
         <Route path="reels" element={<AdminReels />} />
         <Route path="editor" element={<WebsiteEditor />} />
         <Route path="blogs" element={<AdminBlogs />} />
+        <Route path="blogs/:id" element={<AdminBlogEditor />} />
+        <Route path="metaobjects" element={<AdminMetaobjects />} />
+        <Route path="metaobjects/new" element={<AdminMetaobjectDefinition />} />
+        <Route path="metaobjects/:id" element={<AdminMetaobjectDefinition />} />
+        <Route path="files" element={<AdminFiles />} />
+        <Route path="menus" element={<AdminMenus />} />
         <Route path="testimonials" element={<AdminTestimonials />} />
         <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="reports" element={<AdminReports />} />
+        <Route path="reports/:id" element={<AdminReportDetail />} />
+        <Route path="live-view" element={<AdminLiveView />} />
         <Route path="coupons" element={<AdminCoupons />} />
+        <Route path="coupons/:id" element={<AdminDiscountEditor />} />
+        <Route path="discounts" element={<AdminCoupons />} />
+        <Route path="discounts/:id" element={<AdminDiscountEditor />} />
         <Route path="customers" element={<AdminCustomers />} />
+        <Route path="customers/:id" element={<AdminCustomerDetail />} />
+        {/* The page is the Shopify-style Collections manager; /categories is
+            kept so existing links and the sidebar entry keep resolving. */}
+        <Route path="collections" element={<AdminCategories />} />
+        <Route path="collections/:id" element={<AdminCategories />} />
         <Route path="categories" element={<AdminCategories />} />
         <Route path="inventory" element={<AdminInventory />} />
+        <Route path="transfers/new" element={<AdminTransferCreate />} />
         <Route path="reviews" element={<AdminReviews />} />
         <Route path="inquiries" element={<AdminInquiries />} />
         <Route path="newsletter" element={<AdminNewsletter />} />

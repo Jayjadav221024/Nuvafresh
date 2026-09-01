@@ -10,14 +10,25 @@ const blogSchema = new mongoose.Schema(
     status: { type: String, enum: ['Published', 'Draft'], default: 'Published' },
     views: { type: Number, default: 0 },
     tags: [{ type: String }],
-    bannerImage: { type: String, required: true },
+    /* Not required: Shopify lets a post be saved with only a title, and a
+       hidden draft with no cover image yet is a normal state to be in. */
+    bannerImage: { type: String, default: '' },
     images: {
       left: { type: String },
       right: { type: String }
     },
-    excerpt: { type: String, required: true },
-    content: { type: String, required: true },
-    publishedAt: { type: Date, default: Date.now }
+    excerpt: { type: String, default: '' },
+    content: { type: String, default: '' },
+    publishedAt: { type: Date, default: Date.now },
+
+    /* ── Search engine listing ── */
+    seo: {
+      title: { type: String, default: '' },
+      description: { type: String, default: '' },
+      handle: { type: String, default: '' }
+    },
+
+    themeTemplate: { type: String, default: 'Default blog post' }
   },
   { timestamps: true }
 );

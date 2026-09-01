@@ -96,6 +96,13 @@
   --font-family-display: 'Quicksand', '5thAvenue', 'Playfair Display', serif;
   --font-family-body: 'Inter', sans-serif;
 
+  /* Shopify admin's own stack. The Noto faces come before the system fonts so
+     Arabic, Hebrew and Thai fall back to a face that matches Inter's metrics
+     instead of whatever the OS picks. */
+  --font-family-admin: 'Inter', 'Noto Sans Arabic', 'Noto Sans Hebrew', 'Noto Sans Thai',
+    -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto,
+    'Helvetica Neue', sans-serif;
+
   --font-size-xs: 0.8rem;
   --font-size-sm: 1rem;
   --font-size-base: 1.08rem;
@@ -142,6 +149,172 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-family-display);
   }
+}
+
+/* ═════════════════════════════════════════════════════════════
+   ADMIN TYPOGRAPHY
+   The admin runs on Inter alone. Headings would otherwise inherit
+   the storefront's Quicksand from the base layer, and form controls
+   don't inherit font-family at all — hence the explicit list.
+═════════════════════════════════════════════════════════════ */
+.admin-shell,
+.admin-shell :where(.font-sans, .font-display, .font-body),
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3,
+.admin-shell h4,
+.admin-shell h5,
+.admin-shell h6,
+.admin-shell input,
+.admin-shell select,
+.admin-shell textarea,
+.admin-shell button,
+.admin-shell optgroup,
+.admin-shell option {
+  font-family: var(--font-family-admin);
+}
+
+/* The one exemption: the Nuva wordmark in the top bar is brand, not UI. */
+.admin-shell .brand-wordmark {
+  font-family: var(--font-family-display);
+}
+
+/* ═════════════════════════════════════════════════════════════
+   ADMIN CONTRAST
+   The admin leans on neutral-400/500/600 for every caption, hint and
+   secondary cell. At the storefront's values those greys sit at 2.8:1
+   to 3.9:1 on a white card — legible on a good monitor, invisible on a
+   laptop at an angle. These are the same steps, moved to values that
+   clear 4.5:1 on the surface they actually land on.
+
+   Scoped to the themed surfaces only: the top bar and its popovers are
+   always dark, so they keep the lighter greys that suit black.
+═════════════════════════════════════════════════════════════ */
+.admin-surface {
+  --color-neutral-400: #767676; /* 4.5:1 on white */
+  --color-neutral-500: #656565; /* 5.7:1 */
+  --color-neutral-600: #525252; /* 8.0:1 */
+}
+
+.dark .admin-surface {
+  --color-neutral-400: #b4b4b4; /* 8.9:1 on #1a1a1a */
+  --color-neutral-500: #a1a1a1; /* 6.9:1 */
+  --color-neutral-600: #8c8c8c; /* 5.0:1 — for text that never got a dark: variant */
+}
+
+/* A card is a lighter plane than the canvas it sits on; in dark mode the
+   storefront body colour would otherwise show through as near-black text. */
+.dark .admin-surface :where(input, select, textarea)::placeholder {
+  color: #8c8c8c;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Scrollbars for admin panels & the Website Editor workspace.
+   Every editor pane scrolls on its own, so the bars must stay
+   visible (thin + always rendered) instead of overlay-hidden.
+───────────────────────────────────────────────────────────── */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #c4c4c4 transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #c4c4c4;
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #9a9a9a;
+  background-clip: content-box;
+}
+
+.dark .custom-scrollbar {
+  scrollbar-color: #4a4a4a transparent;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #4a4a4a;
+  background-clip: content-box;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #6a6a6a;
+  background-clip: content-box;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Storefront components rendered inside the editor canvas must stay inside
+   the device frame — a viewport-fixed float (WhatsApp bubble, back-to-top)
+   would otherwise hover over the admin chrome itself. */
+.editor-canvas-frame .fixed {
+  position: absolute !important;
+}
+
+.editor-canvas-frame .sticky {
+  position: relative !important;
+  top: auto !important;
+}
+
+/* ── Product description rich-text surface ── */
+.rte-surface:empty::before {
+  content: attr(data-placeholder);
+  color: #9a9a9a;
+  pointer-events: none;
+}
+
+.rte-surface h1 { font-size: 1.5rem; font-weight: 700; margin: 0.6em 0 0.3em; }
+.rte-surface h2 { font-size: 1.25rem; font-weight: 700; margin: 0.6em 0 0.3em; }
+.rte-surface h3 { font-size: 1.1rem; font-weight: 700; margin: 0.6em 0 0.3em; }
+.rte-surface h4 { font-size: 1rem; font-weight: 700; margin: 0.6em 0 0.3em; }
+.rte-surface p { margin: 0.5em 0; }
+.rte-surface ul { list-style: disc; padding-left: 1.4em; margin: 0.5em 0; }
+.rte-surface ol { list-style: decimal; padding-left: 1.4em; margin: 0.5em 0; }
+.rte-surface a { color: #005bd3; text-decoration: underline; }
+.rte-surface blockquote {
+  border-left: 3px solid #d0d0d0;
+  padding-left: 0.9em;
+  margin: 0.6em 0;
+  color: #5c5f62;
+}
+.rte-surface pre {
+  background: #f4f4f4;
+  padding: 0.6em 0.8em;
+  border-radius: 6px;
+  font-family: ui-monospace, monospace;
+  overflow-x: auto;
+}
+.rte-surface table { border-collapse: collapse; width: 100%; margin: 0.75em 0; }
+.rte-surface td, .rte-surface th { border: 1px solid #d0d0d0; padding: 6px 10px; }
+.rte-surface img { max-width: 100%; height: auto; border-radius: 6px; }
+.rte-surface hr { border: 0; border-top: 1px solid #d0d0d0; margin: 1em 0; }
+
+.dark .rte-surface pre { background: #2a2a2a; }
+.dark .rte-surface td, .dark .rte-surface th { border-color: #3d3d3d; }
+
+/* Selection outline for sections that live inside a larger component and
+   therefore have no editor frame of their own. */
+.editor-canvas-frame .nuva-editor-selected {
+  outline: 2px solid #005bd3;
+  outline-offset: -2px;
 }
 
 /* Custom UI Components matching Design System tokens */

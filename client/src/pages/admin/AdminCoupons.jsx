@@ -1,246 +1,289 @@
-import React, { useState, useEffect } from 'react';
-import { Tag, Plus, Trash2, CheckCircle2, AlertCircle, Copy, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Tag, Plus, Trash2, Search, Loader2, Check, AlertCircle, SlidersHorizontal,
+  ChevronLeft, ChevronRight, Percent
+} from 'lucide-react';
 import API from '../../api/axiosInstance';
+import { STORE_TOPICS, publishStoreChange } from '../../lib/storeSync';
 
-const SEED_COUPONS = [
-  { _id: 'c-1', code: 'WELCOME10', type: 'percentage', value: 10, minOrderValue: 299, usageLimit: 5000, usedCount: 342, status: 'Active', validTo: '2026-12-31' },
-  { _id: 'c-2', code: 'OZONEPURITY', type: 'flat', value: 100, minOrderValue: 999, usageLimit: 1000, usedCount: 189, status: 'Active', validTo: '2026-10-15' },
-  { _id: 'c-3', code: 'FREESHIP500', type: 'flat', value: 50, minOrderValue: 499, usageLimit: 2000, usedCount: 612, status: 'Active', validTo: '2026-11-30' },
-  { _id: 'c-4', code: 'FARMFRESH15', type: 'percentage', value: 15, minOrderValue: 1499, usageLimit: 500, usedCount: 500, status: 'Expired', validTo: '2026-07-31' },
-];
+const STATUS_TABS = ['All', 'Active', 'Scheduled', 'Expired'];
+
+const statusStyles = {
+  Active: 'bg-[#cbf4c9] text-[#0e621d] dark:bg-emerald-950 dark:text-emerald-300',
+  Scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
+  Expired: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+  Disabled: 'bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300'
+};
+
+/* Same sentence the editor's summary shows, so the list and the detail
+   page describe a discount identically. */
+const describe = (c) => {
+  const value = c.type === 'percentage' ? `${c.value}% off` : `₹${c.value} off`;
+  const scope = c.discountClass === 'shipping'
+    ? 'shipping'
+    : c.discountClass === 'product'
+      ? 'products'
+      : 'entire order';
+
+  const min = c.minimumRequirement === 'amount' && c.minOrderValue
+    ? ` · min ₹${c.minOrderValue}`
+    : c.minimumRequirement === 'quantity' && c.minQuantity
+      ? ` · min ${c.minQuantity} items`
+      : '';
+
+  return `${value} ${scope}${min}`;
+};
 
 const AdminCoupons = () => {
-  const [coupons, setCoupons] = useState(SEED_COUPONS);
-  const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [newCoupon, setNewCoupon] = useState({
-    code: '',
-    type: 'percentage',
-    value: 10,
-    minOrderValue: 499,
-    usageLimit: 1000,
-    validTo: '2026-12-31'
-  });
+  const navigate = useNavigate();
 
-  const fetchCoupons = async () => {
+  const [coupons, setCoupons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [tab, setTab] = useState('All');
+  const [selected, setSelected] = useState([]);
+  const [toast, setToast] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
+  const showToast = (type, message) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const load = async () => {
     try {
-      setLoading(true);
       const { data } = await API.get('/admin/coupons');
-      if (data.success && data.coupons && data.coupons.length > 0) {
-        setCoupons(data.coupons);
-      }
+      if (data?.success) setCoupons(data.coupons || []);
     } catch (e) {
-      console.warn('Coupon fetch error', e);
+      showToast('error', 'Could not load discounts');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchCoupons();
-  }, []);
+  useEffect(() => { load(); }, []);
 
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    const payload = {
-      ...newCoupon,
-      code: newCoupon.code.toUpperCase().trim(),
-      value: Number(newCoupon.value),
-      minOrderValue: Number(newCoupon.minOrderValue) || 0,
-      usageLimit: Number(newCoupon.usageLimit) || 1000,
-      status: 'Active'
-    };
-
-    try {
-      const { data } = await API.post('/admin/coupons', payload);
-      if (data.success && data.coupon) {
-        setCoupons([data.coupon, ...coupons]);
-      } else {
-        setCoupons([{ _id: `c-${Date.now()}`, ...payload, usedCount: 0 }, ...coupons]);
-      }
-    } catch (err) {
-      setCoupons([{ _id: `c-${Date.now()}`, ...payload, usedCount: 0 }, ...coupons]);
-    }
-    setShowModal(false);
-    setNewCoupon({ code: '', type: 'percentage', value: 10, minOrderValue: 499, usageLimit: 1000, validTo: '2026-12-31' });
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Delete ${selected.length} discount(s)?`)) return;
+    await Promise.all(selected.map((id) => API.delete(`/admin/coupons/${id}`).catch(() => {})));
+    publishStoreChange(STORE_TOPICS.DISCOUNTS);
+    setSelected([]);
+    await load();
+    showToast('success', 'Discounts deleted');
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to remove this coupon?')) {
-      try {
-        await API.delete(`/admin/coupons/${id}`);
-        setCoupons(coupons.filter(c => c._id !== id && c.id !== id));
-      } catch (e) {
-        setCoupons(coupons.filter(c => c._id !== id && c.id !== id));
-      }
-    }
-  };
+  const filtered = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return coupons.filter((c) => {
+      const matchTab = tab === 'All' || c.status === tab;
+      const matchSearch = !q || c.code?.toLowerCase().includes(q) || c.title?.toLowerCase().includes(q);
+      return matchTab && matchSearch;
+    });
+  }, [coupons, tab, searchTerm]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const totalRedemptions = coupons.reduce((sum, c) => sum + (c.usedCount || 0), 0);
+  const activeCount = coupons.filter((c) => c.status === 'Active').length;
 
   return (
-    <div className="space-y-6 font-sans">
-      
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white font-display">
-            Coupons & Discounts
-          </h1>
-          <p className="text-xs text-neutral-500 mt-1">
-            Manage promotional coupon codes, percentage discounts, minimum cart value requirements, and usage limits.
-          </p>
+    <div className="space-y-4 font-sans text-[#1a1a1a] dark:text-[#e3e3e3]">
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Tag className="h-5 w-5 text-neutral-600 dark:text-neutral-400" />
+          <h1 className="text-xl font-bold tracking-tight">Discounts</h1>
         </div>
 
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 rounded-xl bg-[#2d472c] hover:bg-[#20341f] text-white text-xs font-bold shadow-md flex items-center gap-2 transition-transform active:scale-95"
+        <Link
+          to="/admin/discounts/new"
+          className="px-3.5 py-1.5 rounded-lg bg-[#202223] hover:bg-[#303030] dark:bg-white dark:hover:bg-neutral-200 text-white dark:text-black text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors"
         >
-          <Plus className="h-4 w-4" />
-          <span>Create New Coupon</span>
-        </button>
+          <Plus className="h-3.5 w-3.5" /> Create discount
+        </Link>
       </div>
 
-      {/* Coupons Table */}
-      <div className="p-6 rounded-3xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 uppercase tracking-wider font-extrabold bg-neutral-100/70 dark:bg-neutral-800/60">
-                <th className="py-3 px-3">Coupon Code</th>
-                <th className="py-3 px-3">Type & Discount</th>
-                <th className="py-3 px-3">Min Order Value</th>
-                <th className="py-3 px-3">Usage Progress</th>
-                <th className="py-3 px-3">Valid Until</th>
-                <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {coupons.map((c) => (
-                <tr key={c._id || c.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                  <td className="py-4 font-black text-sm text-[#2d472c] dark:text-emerald-400 font-mono flex items-center gap-2">
-                    <Tag className="h-3.5 w-3.5" />
-                    <span>{c.code}</span>
-                  </td>
-                  <td className="py-4 font-semibold text-neutral-800 dark:text-neutral-200">
-                    {c.type === 'percentage' ? `${c.value}% OFF` : `₹${c.value} Flat OFF`}
-                  </td>
-                  <td className="py-4 text-neutral-600 dark:text-neutral-400 font-medium">
-                    ₹{c.minOrderValue}
-                  </td>
-                  <td className="py-4 text-neutral-700 dark:text-neutral-300">
-                    <span className="font-bold">{c.usedCount || 0}</span> / {c.usageLimit || 1000} uses
-                  </td>
-                  <td className="py-4 text-neutral-500 font-mono">
-                    {c.validTo ? new Date(c.validTo).toLocaleDateString() : (c.validTill || 'Lifetime')}
-                  </td>
-                  <td className="py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                      c.status === 'Active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-neutral-100 text-neutral-600'
-                    }`}>
-                      {c.status}
-                    </span>
-                  </td>
-                  <td className="py-4 text-right">
-                    <button
-                      onClick={() => handleDelete(c._id || c.id)}
-                      className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950 transition-colors"
-                      title="Delete Coupon"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Metrics */}
+      <div className="p-4 rounded-2xl bg-white dark:bg-[#1a1a1a] border border-[#d8d8d8] dark:border-neutral-800 shadow-sm grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-neutral-200 dark:divide-neutral-800 gap-4 md:gap-0">
+        <div className="px-3 space-y-1">
+          <p className="text-xs text-neutral-500 font-medium">Active discounts</p>
+          <p className="text-sm font-bold">{activeCount}</p>
+        </div>
+        <div className="px-3 space-y-1">
+          <p className="text-xs text-neutral-500 font-medium">Total redemptions</p>
+          <p className="text-sm font-bold">{totalRedemptions}</p>
+        </div>
+        <div className="px-3 space-y-1">
+          <p className="text-xs text-neutral-500 font-medium">All discounts</p>
+          <p className="text-sm font-bold">{coupons.length}</p>
         </div>
       </div>
 
-      {/* Create Coupon Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-white font-display">Create Promotional Coupon</h3>
-            <form onSubmit={handleCreate} className="space-y-3">
-              <div>
-                <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Coupon Code (Uppercase):</label>
-                <input
-                  type="text"
-                  placeholder="e.g. WELCOME10"
-                  value={newCoupon.code}
-                  onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value })}
-                  required
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-mono uppercase bg-white dark:bg-neutral-800 mt-1"
-                />
-              </div>
+      {/* Table */}
+      <div className="rounded-2xl bg-white dark:bg-[#1a1a1a] border border-[#d8d8d8] dark:border-neutral-800 shadow-sm overflow-hidden">
+        <div className="p-2.5 px-3 border-b border-[#e1e1e1] dark:border-neutral-800 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            {STATUS_TABS.map((t) => (
+              <button
+                key={t}
+                onClick={() => { setTab(t); setCurrentPage(1); }}
+                className={`text-xs font-bold px-2 py-1 rounded-md transition-colors ${
+                  tab === t
+                    ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white'
+                    : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Discount Type:</label>
-                  <select
-                    value={newCoupon.type}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, type: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs bg-white dark:bg-neutral-800 mt-1"
-                  >
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="flat">Flat Cash (₹)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Discount Value:</label>
-                  <input
-                    type="number"
-                    value={newCoupon.value}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, value: Number(e.target.value) })}
-                    required
-                    className="w-full px-3.5 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs bg-white dark:bg-neutral-800 mt-1"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Min Cart Value (₹):</label>
-                  <input
-                    type="number"
-                    value={newCoupon.minOrderValue}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, minOrderValue: Number(e.target.value) })}
-                    required
-                    className="w-full px-3.5 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs bg-white dark:bg-neutral-800 mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Max Usage Limit:</label>
-                  <input
-                    type="number"
-                    value={newCoupon.usageLimit}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, usageLimit: Number(e.target.value) })}
-                    required
-                    className="w-full px-3.5 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs bg-white dark:bg-neutral-800 mt-1"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-neutral-600 hover:bg-neutral-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-[#2d472c] hover:bg-[#20341f] text-white text-xs font-bold shadow-md"
-                >
-                  Save Coupon
-                </button>
-              </div>
-            </form>
+            <div className="relative flex-1 max-w-sm flex items-center ml-1">
+              <Search className="h-3.5 w-3.5 absolute left-2.5 text-neutral-400 pointer-events-none" />
+              <input
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                placeholder="Search discounts"
+                className="w-full pl-8 pr-3 py-1 text-xs rounded-lg border border-transparent hover:border-neutral-300 dark:hover:border-neutral-700 focus:border-neutral-400 bg-transparent focus:outline-none"
+              />
+            </div>
           </div>
+
+          {selected.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="text-xs font-bold text-rose-600 hover:text-rose-700 px-2 py-1 rounded hover:bg-rose-50 flex items-center gap-1.5 transition-colors shrink-0"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete ({selected.length})
+            </button>
+          )}
+
+          <button className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 shrink-0" title="Columns">
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="py-16 flex items-center justify-center gap-2 text-xs text-neutral-400">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading discounts…
+          </div>
+        ) : paginated.length === 0 ? (
+          <div className="py-16 text-center space-y-3">
+            <Percent className="h-8 w-8 text-neutral-300 mx-auto" />
+            <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+              {searchTerm || tab !== 'All' ? 'No discounts match this filter' : 'No discounts yet'}
+            </p>
+            {!searchTerm && tab === 'All' && (
+              <Link to="/admin/discounts/new" className="text-xs font-bold text-[#005bd3] hover:underline">
+                Create your first discount
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-[#e1e1e1] dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 font-semibold">
+                  <th className="py-2.5 px-4 w-10">
+                    <input
+                      type="checkbox"
+                      checked={selected.length === paginated.length && paginated.length > 0}
+                      onChange={(e) => setSelected(e.target.checked ? paginated.map((c) => c._id) : [])}
+                      className="rounded border-neutral-300 text-[#1a1a1a] focus:ring-0 cursor-pointer"
+                    />
+                  </th>
+                  <th className="py-2.5 px-3">Title</th>
+                  <th className="py-2.5 px-3">Status</th>
+                  <th className="py-2.5 px-3">Method</th>
+                  <th className="py-2.5 px-3">Type</th>
+                  <th className="py-2.5 px-4">Used</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#e1e1e1] dark:divide-neutral-800">
+                {paginated.map((c) => (
+                  <tr
+                    key={c._id}
+                    onClick={() => navigate(`/admin/discounts/${c._id}`)}
+                    className="cursor-pointer hover:bg-[#f7f7f7] dark:hover:bg-neutral-800/50 transition-colors"
+                  >
+                    <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(c._id)}
+                        onChange={() =>
+                          setSelected((prev) =>
+                            prev.includes(c._id) ? prev.filter((i) => i !== c._id) : [...prev, c._id]
+                          )
+                        }
+                        className="rounded border-neutral-300 text-[#1a1a1a] focus:ring-0 cursor-pointer"
+                      />
+                    </td>
+                    <td className="py-3 px-3">
+                      <p className="font-semibold font-mono text-[#1a1a1a] dark:text-white hover:underline">
+                        {c.code}
+                      </p>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">{describe(c)}</p>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusStyles[c.status] || statusStyles.Active}`}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400 capitalize">
+                      {c.method === 'automatic' ? 'Automatic' : 'Code'}
+                    </td>
+                    <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400">
+                      {c.discountClass === 'shipping'
+                        ? 'Shipping discount'
+                        : c.discountClass === 'product'
+                          ? 'Product discount'
+                          : 'Order discount'}
+                    </td>
+                    <td className="py-3 px-4 text-neutral-700 dark:text-neutral-300 font-medium">
+                      {c.usedCount || 0}
+                      {c.limitTotalUses && c.usageLimit ? ` / ${c.usageLimit}` : ''}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {filtered.length > itemsPerPage && (
+          <div className="p-3 border-t border-[#e1e1e1] dark:border-neutral-800 flex items-center gap-1 text-xs text-neutral-500">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="p-1 rounded border border-neutral-300 dark:border-neutral-700 disabled:opacity-40"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="p-1 rounded border border-neutral-300 dark:border-neutral-700 disabled:opacity-40"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+            <span className="ml-2 font-medium">
+              {(currentPage - 1) * itemsPerPage + 1}–{Math.min(filtered.length, currentPage * itemsPerPage)} of {filtered.length}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {toast && (
+        <div className={`fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 ${
+          toast.type === 'error' ? 'bg-rose-600 text-white' : 'bg-[#1a1a1a] text-white'
+        }`}>
+          {toast.type === 'error' ? <AlertCircle className="h-4 w-4" /> : <Check className="h-4 w-4 text-emerald-400" />}
+          {toast.message}
         </div>
       )}
-
     </div>
   );
 };

@@ -5,8 +5,12 @@ import API from '../api/axiosInstance';
 import { ShopCatalogSkeleton } from '../components/common/Skeleton';
 import { useSearchParams } from 'react-router-dom';
 import rawCsvProducts from '../data/csvProducts.json';
+import { STORE_TOPICS, subscribeToStoreChanges } from '../lib/storeSync';
 
-const DEFAULT_CATEGORIES = [
+// Shown only until the live category list arrives, so the filter bar is never
+// empty on first paint. The admin's categories replace these outright — they
+// are not merged in, or a deleted category would linger on the storefront.
+const PLACEHOLDER_CATEGORIES = [
   'All',
   'Fresh Produce',
   'Pulses & Lentils',
@@ -16,46 +20,50 @@ const DEFAULT_CATEGORIES = [
   'Healthy Sweeteners'
 ];
 
+const norm = (value) => String(value ?? '').trim().toLowerCase();
+
 const ShopPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'All';
 
   const [products, setProducts] = useState(rawCsvProducts || []);
-  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [categories, setCategories] = useState(PLACEHOLDER_CATEGORIES);
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [search, setSearch] = useState('');
   const [ozoneOnly, setOzoneOnly] = useState(false);
 
   React.useEffect(() => {
-    const urlCat = searchParams.get('category');
-    if (urlCat) {
-      setSelectedCategory(urlCat);
-    }
+    setSelectedCategory(searchParams.get('category') || 'All');
   }, [searchParams]);
 
-  React.useEffect(() => {
-    const fetchCatalog = async () => {
-      try {
-        const [prodRes, catRes] = await Promise.allSettled([
-          API.get('/products'),
-          API.get('/admin/categories/public')
-        ]);
+  const fetchCatalog = React.useCallback(async () => {
+    const [prodRes, catRes] = await Promise.allSettled([
+      API.get('/products'),
+      API.get('/admin/categories/public')
+    ]);
 
-        if (prodRes.status === 'fulfilled' && prodRes.value.data.success && prodRes.value.data.products?.length > 0) {
-          setProducts(prodRes.value.data.products);
-        }
+    if (prodRes.status === 'fulfilled' && prodRes.value.data?.success && prodRes.value.data.products?.length > 0) {
+      setProducts(prodRes.value.data.products);
+    }
 
-        if (catRes.status === 'fulfilled' && catRes.value.data.success && catRes.value.data.categories?.length > 0) {
-          const names = ['All', ...catRes.value.data.categories.map(c => c.name)];
-          setCategories(Array.from(new Set([...DEFAULT_CATEGORIES, ...names])));
-        }
-      } catch (e) {
-        setProducts(rawCsvProducts);
-      }
-    };
-    fetchCatalog();
+    if (catRes.status === 'fulfilled' && catRes.value.data?.success) {
+      const names = (catRes.value.data.categories || [])
+        .filter((c) => c.status !== 'Archived' && c.status !== 'Draft')
+        .map((c) => c.name)
+        .filter(Boolean);
+
+      if (names.length > 0) setCategories(['All', ...Array.from(new Set(names))]);
+    }
   }, []);
+
+  React.useEffect(() => {
+    fetchCatalog();
+    return subscribeToStoreChanges(
+      [STORE_TOPICS.PRODUCTS, STORE_TOPICS.CATEGORIES, STORE_TOPICS.INVENTORY],
+      fetchCatalog
+    );
+  }, [fetchCatalog]);
 
   const handleSelectCategory = (cat) => {
     setSelectedCategory(cat);
@@ -68,8 +76,12 @@ const ShopPage = () => {
   };
 
   const filtered = products.filter((p) => {
-    const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-    const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase());
+    // Compare loosely: a link may arrive with different casing or spacing than
+    // the category is stored with, and an exact match would show nothing.
+    const matchesCategory = selectedCategory === 'All' || norm(p.category) === norm(selectedCategory);
+    const query = norm(search);
+    const matchesSearch =
+      !query || norm(p.title).includes(query) || norm(p.category).includes(query);
     const matchesOzone = !ozoneOnly || p.isOzoneWashed;
     return matchesCategory && matchesSearch && matchesOzone;
   });
