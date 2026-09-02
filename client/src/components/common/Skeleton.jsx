@@ -1,12 +1,18 @@
 import React from 'react';
 
 /**
- * Base shimmer block component with configurable classes
+ * Base shimmer block component with configurable classes.
+ * `tone="admin"` swaps the warm storefront surface for the neutral grey the
+ * Shopify-style admin uses.
  */
-export const Skeleton = ({ className = '', rounded = 'rounded-md', ...props }) => {
+export const Skeleton = ({ className = '', rounded = 'rounded-md', tone = 'warm', ...props }) => {
+  const surface = tone === 'admin'
+    ? 'bg-[#dcdcdc] dark:bg-[#2a2b2c]'
+    : 'bg-[#ece8dd]/80 dark:bg-neutral-800';
+
   return (
     <div
-      className={`relative overflow-hidden bg-[#ece8dd]/80 dark:bg-neutral-800 animate-pulse ${rounded} ${className}`}
+      className={`relative overflow-hidden ${surface} animate-pulse ${rounded} ${className}`}
       {...props}
     >
       <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/40 dark:via-neutral-700/40 to-transparent" />

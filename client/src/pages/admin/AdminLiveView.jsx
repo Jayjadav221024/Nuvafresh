@@ -4,6 +4,7 @@ import {
   CheckCircle2, Smartphone, Monitor, Tablet
 } from 'lucide-react';
 import API from '../../api/axiosInstance';
+import EarthGlobe from '../../components/admin/EarthGlobe';
 
 /* ═══════════════════════════════════════════════════════════════════
    LIVE VIEW
@@ -63,85 +64,6 @@ const Sparkline = ({ data, width = 120, height = 30 }) => {
   );
 };
 
-/* ═══════════════════════════════════════════════════════════════════
-   GLOBE
-   An orthographic projection. The dotted sphere is decoration — it makes
-   no claim about coastlines. The pins are the data: one per location we
-   actually have a coordinate for, sized by how many sessions it holds.
-═══════════════════════════════════════════════════════════════════ */
-const Globe3D = ({ locations, size = 460 }) => {
-  const [spin, setSpin] = useState(78); // centred on South Asia to start
-  const radius = size / 2 - 10;
-  const centre = size / 2;
-
-  useEffect(() => {
-    const timer = setInterval(() => setSpin((s) => (s + 0.15) % 360), 60);
-    return () => clearInterval(timer);
-  }, []);
-
-  const toXY = (lat, lng) => {
-    const phi = (lat * Math.PI) / 180;
-    const lambda = ((lng - spin) * Math.PI) / 180;
-    const cosC = Math.cos(phi) * Math.cos(lambda);
-    return {
-      x: centre + radius * Math.cos(phi) * Math.sin(lambda),
-      y: centre - radius * Math.sin(phi),
-      visible: cosC > 0
-    };
-  };
-
-  // A lat/lng lattice, projected — the "dot globe" texture.
-  const dots = useMemo(() => {
-    const out = [];
-    for (let lat = -80; lat <= 80; lat += 5) {
-      const ring = Math.max(6, Math.round(36 * Math.cos((lat * Math.PI) / 180)));
-      for (let i = 0; i < ring; i += 1) {
-        out.push({ lat, lng: (i * 360) / ring });
-      }
-    }
-    return out;
-  }, []);
-
-  const pins = locations.filter((l) => typeof l.lat === 'number' && typeof l.lng === 'number');
-  const maxPin = Math.max(...pins.map((p) => p.value), 1);
-
-  return (
-    <svg width={size} height={size} className="max-w-full" role="img" aria-label="Sessions by location">
-      <defs>
-        <radialGradient id="globe-sheen" cx="35%" cy="30%">
-          <stop offset="0%" stopColor="var(--viz-globe-hi)" />
-          <stop offset="100%" stopColor="var(--viz-globe-lo)" />
-        </radialGradient>
-      </defs>
-
-      <circle cx={centre} cy={centre} r={radius} fill="url(#globe-sheen)" />
-
-      {dots.map((d, i) => {
-        const p = toXY(d.lat, d.lng);
-        if (!p.visible) return null;
-        return <circle key={i} cx={p.x} cy={p.y} r="1.3" fill="var(--viz-globe-dot)" />;
-      })}
-
-      {pins.map((loc) => {
-        const p = toXY(loc.lat, loc.lng);
-        if (!p.visible) return null;
-        const r = 4 + (loc.value / maxPin) * 4;
-        return (
-          <g key={loc.label}>
-            <circle cx={p.x} cy={p.y} r={r + 5} fill="var(--viz-series-5)" opacity="0.18">
-              <animate attributeName="r" values={`${r};${r + 9};${r}`} dur="2.4s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.3;0;0.3" dur="2.4s" repeatCount="indefinite" />
-            </circle>
-            <circle cx={p.x} cy={p.y} r={r} fill="var(--viz-series-5)" stroke="var(--viz-surface)" strokeWidth="2">
-              <title>{`${loc.label}: ${loc.value} sessions`}</title>
-            </circle>
-          </g>
-        );
-      })}
-    </svg>
-  );
-};
-
 const AdminLiveView = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -176,6 +98,12 @@ const AdminLiveView = () => {
   }, [data, locationQuery]);
 
   const maxLocation = Math.max(...locations.map((l) => l.value), 1);
+  const located = useMemo(() => locations.filter((l) => typeof l.lat === 'number'), [locations]);
+  const locatedCount = located.length;
+  const exactCount = located.filter((l) => l.precision === 'address').length;
+
+  // Narrow the search to one place and the globe turns to face it.
+  const focus = locatedCount === 1 && locationQuery.trim() ? located[0] : null;
 
   const freshness = useMemo(() => {
     if (!updatedAt) return '';
@@ -188,21 +116,15 @@ const AdminLiveView = () => {
       className="viz-root space-y-4 font-sans text-[#1a1a1a] dark:text-[#e3e3e3]"
       style={{
         '--viz-series-1': '#2a78d6',
-        '--viz-series-5': '#e87ba4',
-        '--viz-surface': '#ffffff',
-        '--viz-globe-hi': '#eaf4fd',
-        '--viz-globe-lo': '#d3e8f8',
-        '--viz-globe-dot': '#4fb3d9'
+        '--viz-series-5': '#e8618f', // matches the globe's session pins
+        '--viz-surface': '#ffffff'
       }}
     >
       <style>{`
         .dark .viz-root {
           --viz-series-1: #3987e5;
-          --viz-series-5: #d55181;
+          --viz-series-5: #ff7ba6;
           --viz-surface: #1a1a1a;
-          --viz-globe-hi: #12242f;
-          --viz-globe-lo: #0d1a22;
-          --viz-globe-dot: #2f7f9e;
         }
       `}</style>
 
@@ -385,17 +307,22 @@ const AdminLiveView = () => {
           {/* ── Right column: globe + today's orders ── */}
           <div className="space-y-4">
             <Card className="overflow-hidden">
-              <div className="flex items-center justify-center py-2">
-                <Globe3D locations={data.sessionsByLocation} />
+              <div className="py-2">
+                <EarthGlobe locations={locations} focus={focus} />
               </div>
-              <div className="flex items-center justify-center gap-4 pt-2 border-t border-[#e1e1e1] dark:border-neutral-800">
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-2 border-t border-[#e1e1e1] dark:border-neutral-800">
                 <span className="flex items-center gap-1.5 text-[11px] text-neutral-600 dark:text-neutral-400">
                   <span className="h-2 w-2 rounded-full" style={{ background: 'var(--viz-series-5)' }} />
-                  Sessions today
+                  Exact ({exactCount})
                 </span>
-                <span className="text-[11px] text-neutral-500">
-                  {data.sessionsByLocation.filter((l) => typeof l.lat === 'number').length} located
+                <span className="flex items-center gap-1.5 text-[11px] text-neutral-600 dark:text-neutral-400">
+                  <span
+                    className="h-2 w-2 rounded-full border"
+                    style={{ borderColor: 'var(--viz-series-5)' }}
+                  />
+                  Approximate ({locatedCount - exactCount})
                 </span>
+                <span className="text-[11px] text-neutral-500">drag to spin</span>
               </div>
             </Card>
 
@@ -429,7 +356,10 @@ const AdminLiveView = () => {
       <p className="text-[11px] text-neutral-500 px-1">
         A visitor is a storefront tab that reported in within the last five minutes; a
         backgrounded tab stops counting. Location comes from the visitor's device timezone —
-        country-level, no IP lookup — and sharpens to a city only once they place an order.
+        which names a country, not a city, and involves no IP lookup — so those pins sit at the
+        centre of that country and are drawn as open rings. A pin fills in only once an order
+        gives us a real delivery city. Visitors whose browser reports no usable zone are counted
+        but not plotted.
       </p>
     </div>
   );

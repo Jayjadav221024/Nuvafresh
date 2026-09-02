@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import LoadingSpinner from './LoadingSpinner';
+import AdminSkeleton from './AdminSkeleton';
 import { ShieldCheck, Lock, ArrowRight, Sparkles, AlertCircle, ArrowLeft } from 'lucide-react';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -14,7 +14,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   const [errorMsg, setErrorMsg] = useState('');
 
   if (loading) {
-    return <LoadingSpinner fullScreen />;
+    return <AdminSkeleton />;
   }
 
   // If user is already authenticated with proper role, render children

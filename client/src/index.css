@@ -262,16 +262,13 @@
   display: none;
 }
 
-/* Storefront components rendered inside the editor canvas must stay inside
-   the device frame — a viewport-fixed float (WhatsApp bubble, back-to-top)
-   would otherwise hover over the admin chrome itself. */
-.editor-canvas-frame .fixed {
-  position: absolute !important;
-}
-
-.editor-canvas-frame .sticky {
-  position: relative !important;
-  top: auto !important;
+/* The editor canvas is its own document inside an iframe, so `fixed` and
+   `sticky` are already scoped to the device frame and behave exactly as they
+   do on a real phone — a sticky header sticks, a floating button floats.
+   Nothing to override here; the class is kept as the scope for the selection
+   states below. */
+.editor-canvas-frame {
+  margin: 0;
 }
 
 /* ── Product description rich-text surface ── */
@@ -310,11 +307,20 @@
 .dark .rte-surface pre { background: #2a2a2a; }
 .dark .rte-surface td, .dark .rte-surface th { border-color: #3d3d3d; }
 
-/* Selection outline for sections that live inside a larger component and
-   therefore have no editor frame of their own. */
+/* Selection, hover and hide states for sections that live inside a larger
+   component and therefore have no editor frame of their own. */
 .editor-canvas-frame .nuva-editor-selected {
   outline: 2px solid #005bd3;
   outline-offset: -2px;
+}
+
+.editor-canvas-frame .nuva-editor-hover {
+  outline: 2px solid rgba(0, 91, 211, 0.4);
+  outline-offset: -2px;
+}
+
+.editor-canvas-frame .nuva-editor-hidden {
+  display: none !important;
 }
 
 /* Custom UI Components matching Design System tokens */
@@ -399,6 +405,28 @@
 
 .transform-style-3d {
   transform-style: preserve-3d;
+}
+
+/* Sweep behind every <Skeleton> block. The utility was already in use as
+   animate-[shimmer_…] but the keyframes themselves were never declared, so the
+   highlight sat parked off-screen and only the pulse showed. */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Indeterminate progress bar under the admin top bar while a screen loads. */
+@keyframes admin-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
 }
 
 @keyframes marquee-scroll {

@@ -459,22 +459,25 @@ export const MASTER_CMS_SECTIONS = [
     sectionKey: 'about.story',
     page: 'ABOUT US',
     title: 'Founder Narrative & Mission',
-    subtitle: 'Founder Aanshi Patel story, quote, and mission statement.',
+    subtitle: 'Founder Aanshi Patel story, eyebrow, heading, and mission statement.',
     fieldsSchema: [
-      { name: 'founderName', label: 'Founder Name', type: 'text' },
-      { name: 'quoteHeadline', label: 'Quote Headline', type: 'text' },
+      { name: 'eyebrow', label: 'Eyebrow Label', type: 'text' },
+      { name: 'heading', label: 'Section Heading', type: 'text' },
+      { name: 'founderName', label: 'Founder Name', type: 'text', helperText: 'Used in the photo alt text' },
       { name: 'storyText', label: 'Story Narrative', type: 'textarea' },
       { name: 'missionStatement', label: 'Mission Statement', type: 'textarea' }
     ],
     defaultFields: {
+      eyebrow: 'Founder\'s Note',
+      heading: 'Story of Nuva',
       founderName: 'Aanshi Patel',
-      quoteHeadline: 'True nutrition begins where chemical shortcuts end.',
       storyText: 'My name is Aanshi Patel, and I come from a family of farmers in Gujarat, and I have seen first-hand the effort and challenges that go into producing a single yield. What concerned me even more was when I saw the unhygienic "cleaning" practices and how many hands the produce passed through before it reached you.',
       missionStatement: 'In shock and concern, I wanted to change it so that farmers get rewarded for their hard work and people receive fruits and vegetables that are truly clean. With this vision, I founded Nuva. Not just as a company, but as a promise. A promise not just to our customers, but to myself.'
     },
     fields: {
+      eyebrow: 'Founder\'s Note',
+      heading: 'Story of Nuva',
       founderName: 'Aanshi Patel',
-      quoteHeadline: 'True nutrition begins where chemical shortcuts end.',
       storyText: 'My name is Aanshi Patel, and I come from a family of farmers in Gujarat, and I have seen first-hand the effort and challenges that go into producing a single yield. What concerned me even more was when I saw the unhygienic "cleaning" practices and how many hands the produce passed through before it reached you.',
       missionStatement: 'In shock and concern, I wanted to change it so that farmers get rewarded for their hard work and people receive fruits and vegetables that are truly clean. With this vision, I founded Nuva. Not just as a company, but as a promise. A promise not just to our customers, but to myself.'
     },
@@ -484,24 +487,33 @@ export const MASTER_CMS_SECTIONS = [
     sectionKey: 'about.facilities',
     page: 'ABOUT US',
     title: 'Our Facilities Section',
-    subtitle: 'Where Tradition Meets Innovation narrative and Vadodara ozone facility copy.',
+    subtitle: 'Eyebrow, the three stacked heading lines, and the olive panel narrative.',
     fieldsSchema: [
-      { name: 'badge', label: 'Top Small Badge', type: 'text' },
-      { name: 'title', label: 'Section Title', type: 'text' },
-      { name: 'narrative1', label: 'Paragraph 1', type: 'textarea' },
-      { name: 'narrative2', label: 'Paragraph 2', type: 'textarea' }
+      { name: 'eyebrow', label: 'Eyebrow Label', type: 'text' },
+      { name: 'titleLine1', label: 'Heading Line 1', type: 'text' },
+      { name: 'titleLine2', label: 'Heading Line 2', type: 'text' },
+      { name: 'titleLine3', label: 'Heading Line 3', type: 'text' },
+      { name: 'para1', label: 'Paragraph 1', type: 'textarea' },
+      { name: 'para2', label: 'Paragraph 2', type: 'textarea' },
+      { name: 'para3', label: 'Closing Paragraph', type: 'textarea' }
     ],
     defaultFields: {
-      badge: 'Infrastructure & Tech',
-      title: 'Our Facilities: Where Tradition Meet Innovation',
-      narrative1: 'To make sure our vision becomes reality, we established our modern facility in Vadodara. Our facility uses advanced ozone wash technology, cold chain storage and precision sorting systems.',
-      narrative2: 'This perfect blend of traditional respect for nature and modern technological capabilities allows us to clean your produce without using any harsh chemicals.'
+      eyebrow: 'Infrastructure',
+      titleLine1: 'Our Facilities:',
+      titleLine2: 'Where Tradition',
+      titleLine3: 'Meet Innovation',
+      para1: 'Ever known where your produce comes from? Where was it cleaned? Well, now you do. At The Nuva, we deliver safe, organic, chemical-free, fresh, and hygienic produce to every home in Vadodara.',
+      para2: 'Nuva has its own warehouse equipped with ozone-washing technology, an extremely effective method used to disinfect fruits and vegetables. This process helps us remove pesticides, bacteria, and viruses. Our process enhances the taste and colour of the produce making it residual-free, making sure your health is our priority.',
+      para3: 'Our modern technology, clean spaces, and a professional team of doctors and nutritionists make sure that each produce that reaches your home is looked after from harvest to packaging.'
     },
     fields: {
-      badge: 'Infrastructure & Tech',
-      title: 'Our Facilities: Where Tradition Meet Innovation',
-      narrative1: 'To make sure our vision becomes reality, we established our modern facility in Vadodara. Our facility uses advanced ozone wash technology, cold chain storage and precision sorting systems.',
-      narrative2: 'This perfect blend of traditional respect for nature and modern technological capabilities allows us to clean your produce without using any harsh chemicals.'
+      eyebrow: 'Infrastructure',
+      titleLine1: 'Our Facilities:',
+      titleLine2: 'Where Tradition',
+      titleLine3: 'Meet Innovation',
+      para1: 'Ever known where your produce comes from? Where was it cleaned? Well, now you do. At The Nuva, we deliver safe, organic, chemical-free, fresh, and hygienic produce to every home in Vadodara.',
+      para2: 'Nuva has its own warehouse equipped with ozone-washing technology, an extremely effective method used to disinfect fruits and vegetables. This process helps us remove pesticides, bacteria, and viruses. Our process enhances the taste and colour of the produce making it residual-free, making sure your health is our priority.',
+      para3: 'Our modern technology, clean spaces, and a professional team of doctors and nutritionists make sure that each produce that reaches your home is looked after from harvest to packaging.'
     },
     isEdited: false
   },
@@ -509,21 +521,24 @@ export const MASTER_CMS_SECTIONS = [
     sectionKey: 'about.sustainable_packaging',
     page: 'ABOUT US',
     title: 'Sustainable Packaging Section',
-    subtitle: 'Zero plastic food-grade packaging narrative.',
+    subtitle: 'Zero-plastic food-grade packaging card and its photo.',
     fieldsSchema: [
-      { name: 'badge', label: 'Top Small Badge', type: 'text' },
-      { name: 'title', label: 'Section Title', type: 'text' },
-      { name: 'description', label: 'Eco Packaging Description', type: 'textarea' }
+      { name: 'heading', label: 'Card Title', type: 'text' },
+      { name: 'para1', label: 'Paragraph 1', type: 'textarea' },
+      { name: 'para2', label: 'Paragraph 2', type: 'textarea' },
+      { name: 'image', label: 'Packaging Photo', type: 'image' }
     ],
     defaultFields: {
-      badge: 'Earth Friendly',
-      title: 'Sustainable Packaging for a Greener Tomorrow',
-      description: 'We believe clean food deserves clean packaging. All Nuva produce is packaged in 100% biodegradable kraft bags and breathable bio-containers that lock in natural moisture while eliminating single-use plastic waste.'
+      heading: 'SUSTAINABLE PACKAGING',
+      para1: 'The Nuva packaging is food grade and it ensures that once the produce is cleaned, it stays fresh and uncontaminated. Our packaging is designed to contain minimal plastic and uses biodegradable and recyclable materials, helping reduce waste and pollution.',
+      para2: 'The packaged fruits and vegetables are dispatched directly from the NUVA warehouse to your doorstep in safe hands eliminating middlemen, making sure the produce remains fresh and untouched by unhygienic elements until they reach your hands.',
+      image: '/sustainable-packaging-bag.jpg'
     },
     fields: {
-      badge: 'Earth Friendly',
-      title: 'Sustainable Packaging for a Greener Tomorrow',
-      description: 'We believe clean food deserves clean packaging. All Nuva produce is packaged in 100% biodegradable kraft bags and breathable bio-containers that lock in natural moisture while eliminating single-use plastic waste.'
+      heading: 'SUSTAINABLE PACKAGING',
+      para1: 'The Nuva packaging is food grade and it ensures that once the produce is cleaned, it stays fresh and uncontaminated. Our packaging is designed to contain minimal plastic and uses biodegradable and recyclable materials, helping reduce waste and pollution.',
+      para2: 'The packaged fruits and vegetables are dispatched directly from the NUVA warehouse to your doorstep in safe hands eliminating middlemen, making sure the produce remains fresh and untouched by unhygienic elements until they reach your hands.',
+      image: '/sustainable-packaging-bag.jpg'
     },
     isEdited: false
   },
@@ -531,21 +546,24 @@ export const MASTER_CMS_SECTIONS = [
     sectionKey: 'about.farmers_support',
     page: 'ABOUT US',
     title: 'Back to the Farmers Section',
-    subtitle: 'Fair value and farmer empowerment statement.',
+    subtitle: 'Fair-value farmer empowerment card and its field photo.',
     fieldsSchema: [
-      { name: 'badge', label: 'Top Small Badge', type: 'text' },
-      { name: 'title', label: 'Section Title', type: 'text' },
-      { name: 'description', label: 'Farmer Direct Value Statement', type: 'textarea' }
+      { name: 'heading', label: 'Card Title', type: 'text' },
+      { name: 'para1', label: 'Paragraph 1', type: 'textarea' },
+      { name: 'para2', label: 'Paragraph 2', type: 'textarea' },
+      { name: 'image', label: 'Farmer Photo', type: 'image' }
     ],
     defaultFields: {
-      badge: 'Direct Fair-Value',
-      title: 'Supporting Our Farmers – Giving Back Where It Matters',
-      description: 'Farmers are the true backbone of our nation. By eliminating middlemen and trading directly at fair market rates, we empower farming families with predictable incomes, regenerative training, and soil-enriching bio-inputs.'
+      heading: 'BACK TO THE FARMERS / SUPPORTING OUR FARMERS – GIVING BACK WHERE IT MATTERS',
+      para1: 'The traditional system is not fair to farmers. The love and care they put into their harvest and patiently waiting for seasons to go by just to see their yield. Their commitment and contributions are frequently undervalued, with the outcomes of their hard work remaining largely unrecognized.',
+      para2: 'Our system helps us ensure that farmers receive an actual fair and qualified value for their produce. Buying from Nuva is not just a favour to yourself, but to our country\'s backbone as well.',
+      image: '/supporting-our-farmers.jpg'
     },
     fields: {
-      badge: 'Direct Fair-Value',
-      title: 'Supporting Our Farmers – Giving Back Where It Matters',
-      description: 'Farmers are the true backbone of our nation. By eliminating middlemen and trading directly at fair market rates, we empower farming families with predictable incomes, regenerative training, and soil-enriching bio-inputs.'
+      heading: 'BACK TO THE FARMERS / SUPPORTING OUR FARMERS – GIVING BACK WHERE IT MATTERS',
+      para1: 'The traditional system is not fair to farmers. The love and care they put into their harvest and patiently waiting for seasons to go by just to see their yield. Their commitment and contributions are frequently undervalued, with the outcomes of their hard work remaining largely unrecognized.',
+      para2: 'Our system helps us ensure that farmers receive an actual fair and qualified value for their produce. Buying from Nuva is not just a favour to yourself, but to our country\'s backbone as well.',
+      image: '/supporting-our-farmers.jpg'
     },
     isEdited: false
   },
@@ -769,24 +787,217 @@ export const MASTER_CMS_SECTIONS = [
 
   // 9. PRODUCT DETAIL
   {
-    sectionKey: 'pdp.promo',
+    sectionKey: 'pdp.hero',
     page: 'PRODUCT DETAIL',
-    title: '10% Welcome Discount & Guarantees',
-    subtitle: 'Coupon code callout, delivery guarantee, and trust statements.',
+    title: 'Buying Deck & Gallery',
+    subtitle: 'Ozone badge, quality-checks card, variant label, cart buttons, and the product description block.',
     fieldsSchema: [
-      { name: 'couponCode', label: 'Promo Coupon Code', type: 'text' },
-      { name: 'couponHeadline', label: 'Coupon Callout Text', type: 'text' },
-      { name: 'deliveryGuarantee', label: 'Delivery Guarantee Copy', type: 'text' }
+      { name: 'ozoneBadge', label: 'Ozone Badge Pill', type: 'text', helperText: 'Shown over the main image on ozone-washed products' },
+      { name: 'qualityBadgeTitle', label: 'Quality Card Title', type: 'text', helperText: 'e.g. 70+ Quality Checks' },
+      { name: 'qualityBadgeSubtitle', label: 'Quality Card Subtitle', type: 'text' },
+      { name: 'variantHeading', label: 'Variant Picker Label', type: 'text' },
+      { name: 'addToCartLabel', label: 'Add to Cart Button', type: 'text' },
+      { name: 'buyNowLabel', label: 'Buy Now Button', type: 'text' },
+      { name: 'descriptionHeading', label: 'Description Heading', type: 'text' },
+      { name: 'descriptionFallback', label: 'Description Fallback Copy', type: 'textarea', helperText: 'Used only when the product itself has no description' },
+      { name: 'descriptionNote', label: 'Description Closing Paragraph', type: 'textarea' }
     ],
     defaultFields: {
-      couponCode: 'WELCOME10',
-      couponHeadline: 'Use code WELCOME10 for extra 10% OFF at checkout!',
-      deliveryGuarantee: 'Under 12-hr sunrise farm harvest directly dispatched'
+      ozoneBadge: 'O₃ Aqueous Washed',
+      qualityBadgeTitle: '70+ Quality Checks',
+      qualityBadgeSubtitle: '0% Compromise',
+      variantHeading: 'Select Variant',
+      addToCartLabel: 'Add to cart',
+      buyNowLabel: 'Buy Now',
+      descriptionHeading: 'PRODUCT DESCRIPTION',
+      descriptionFallback: 'This is the organic harvest your grandmother would trust. Our pure produce comes directly from verified smallholder partner farms in Gujarat, harvested at sunrise and never injected with artificial hormones or ripening chemicals.',
+      descriptionNote: 'Every batch is lab-tested through multi-stage gas chromatography, and every dispatch carries our medical-grade aqueous ozone purification guarantee. 0.00 PPM chemical residue, 100% peace of mind.'
     },
     fields: {
+      ozoneBadge: 'O₃ Aqueous Washed',
+      qualityBadgeTitle: '70+ Quality Checks',
+      qualityBadgeSubtitle: '0% Compromise',
+      variantHeading: 'Select Variant',
+      addToCartLabel: 'Add to cart',
+      buyNowLabel: 'Buy Now',
+      descriptionHeading: 'PRODUCT DESCRIPTION',
+      descriptionFallback: 'This is the organic harvest your grandmother would trust. Our pure produce comes directly from verified smallholder partner farms in Gujarat, harvested at sunrise and never injected with artificial hormones or ripening chemicals.',
+      descriptionNote: 'Every batch is lab-tested through multi-stage gas chromatography, and every dispatch carries our medical-grade aqueous ozone purification guarantee. 0.00 PPM chemical residue, 100% peace of mind.'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'pdp.promo',
+    page: 'PRODUCT DETAIL',
+    title: 'App Discount & Coupon Banner',
+    subtitle: 'Green promo strip under the variant grid — headline, coupon codes, and status pill.',
+    fieldsSchema: [
+      { name: 'headline', label: 'Promo Headline', type: 'text' },
+      { name: 'codeIntro', label: 'Coupon Line Prefix', type: 'text', helperText: 'e.g. Use code:' },
+      { name: 'appCouponCode', label: 'App-only Coupon Code', type: 'text' },
+      { name: 'couponCode', label: 'Welcome Coupon Code', type: 'text' },
+      { name: 'badgeLabel', label: 'Status Pill Label', type: 'text' }
+    ],
+    defaultFields: {
+      headline: 'Unlock 17% OFF (15% + 2% extra on APP-only)',
+      codeIntro: 'Use code:',
+      appCouponCode: 'APP17',
       couponCode: 'WELCOME10',
-      couponHeadline: 'Use code WELCOME10 for extra 10% OFF at checkout!',
-      deliveryGuarantee: 'Under 12-hr sunrise farm harvest directly dispatched'
+      badgeLabel: 'ACTIVE'
+    },
+    fields: {
+      headline: 'Unlock 17% OFF (15% + 2% extra on APP-only)',
+      codeIntro: 'Use code:',
+      appCouponCode: 'APP17',
+      couponCode: 'WELCOME10',
+      badgeLabel: 'ACTIVE'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'pdp.pillars',
+    page: 'PRODUCT DETAIL',
+    title: 'Purity Difference Pillars',
+    subtitle: 'Section heading and the four trust cards below the buying deck.',
+    fieldsSchema: [
+      { name: 'heading', label: 'Section Heading', type: 'text' },
+      { name: 'pillar1_title', label: 'Pillar 1 Title', type: 'text' },
+      { name: 'pillar1_desc', label: 'Pillar 1 Description', type: 'textarea' },
+      { name: 'pillar2_title', label: 'Pillar 2 Title', type: 'text' },
+      { name: 'pillar2_desc', label: 'Pillar 2 Description', type: 'textarea' },
+      { name: 'pillar3_title', label: 'Pillar 3 Title', type: 'text' },
+      { name: 'pillar3_desc', label: 'Pillar 3 Description', type: 'textarea' },
+      { name: 'pillar4_title', label: 'Pillar 4 Title', type: 'text' },
+      { name: 'pillar4_desc', label: 'Pillar 4 Description', type: 'textarea' }
+    ],
+    defaultFields: {
+      heading: 'The Nuva Purity Difference',
+      pillar1_title: 'Aqueous O₃ Washed',
+      pillar1_desc: 'Neutralizes 99.9% of bacteria, mold spores, and pesticide residues without heat or wax.',
+      pillar2_title: 'Direct From Soil',
+      pillar2_desc: 'Harvested directly from certified Gujarat partner farms to your home in under 12 hours.',
+      pillar3_title: 'HPLC Lab Tested',
+      pillar3_desc: 'Zero synthetic pesticides or artificial ripening agents verified by gas chromatography.',
+      pillar4_title: '₹1 To Agri-Tech',
+      pillar4_desc: 'Every order funds sustainable equipment and living soil education for smallholder farmers.'
+    },
+    fields: {
+      heading: 'The Nuva Purity Difference',
+      pillar1_title: 'Aqueous O₃ Washed',
+      pillar1_desc: 'Neutralizes 99.9% of bacteria, mold spores, and pesticide residues without heat or wax.',
+      pillar2_title: 'Direct From Soil',
+      pillar2_desc: 'Harvested directly from certified Gujarat partner farms to your home in under 12 hours.',
+      pillar3_title: 'HPLC Lab Tested',
+      pillar3_desc: 'Zero synthetic pesticides or artificial ripening agents verified by gas chromatography.',
+      pillar4_title: '₹1 To Agri-Tech',
+      pillar4_desc: 'Every order funds sustainable equipment and living soil education for smallholder farmers.'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'pdp.comparison',
+    page: 'PRODUCT DETAIL',
+    title: 'Nuva vs Market Comparison Table',
+    subtitle: 'Table heading, the three column headers, and all four comparison rows.',
+    fieldsSchema: [
+      { name: 'heading', label: 'Section Heading', type: 'text' },
+      { name: 'col1', label: 'Column 1 Header', type: 'text' },
+      { name: 'col2', label: 'Column 2 Header (Nuva)', type: 'text' },
+      { name: 'col3', label: 'Column 3 Header (Market)', type: 'text' },
+      { name: 'row1_label', label: 'Row 1 Standard', type: 'text' },
+      { name: 'row1_nuva', label: 'Row 1 — Nuva', type: 'text' },
+      { name: 'row1_market', label: 'Row 1 — Market', type: 'text' },
+      { name: 'row2_label', label: 'Row 2 Standard', type: 'text' },
+      { name: 'row2_nuva', label: 'Row 2 — Nuva', type: 'text' },
+      { name: 'row2_market', label: 'Row 2 — Market', type: 'text' },
+      { name: 'row3_label', label: 'Row 3 Standard', type: 'text' },
+      { name: 'row3_nuva', label: 'Row 3 — Nuva', type: 'text' },
+      { name: 'row3_market', label: 'Row 3 — Market', type: 'text' },
+      { name: 'row4_label', label: 'Row 4 Standard', type: 'text' },
+      { name: 'row4_nuva', label: 'Row 4 — Nuva', type: 'text' },
+      { name: 'row4_market', label: 'Row 4 — Market', type: 'text' }
+    ],
+    defaultFields: {
+      heading: 'How Nuva Compares to Market Produce',
+      col1: 'Purity Standard',
+      col2: 'Nuva Certified Harvest',
+      col3: 'Standard Market Produce',
+      row1_label: 'Cleaning Method',
+      row1_nuva: 'Triple Ozone (O₃) + RO Bubble Wash',
+      row1_market: 'Untreated tap water or chemical wax dip',
+      row2_label: 'Pesticide Residue',
+      row2_nuva: '0.00 ppm (HPLC Certified Clean)',
+      row2_market: 'Common allowable pesticide residue levels',
+      row3_label: 'Harvest to Doorstep',
+      row3_nuva: 'Under 12 Hours Direct',
+      row3_market: '3 to 7 days across middlemen & mandis',
+      row4_label: 'Packaging',
+      row4_nuva: 'Zero-Plastic Breathable Bio-Film',
+      row4_market: 'Single-use plastic suffocation bags'
+    },
+    fields: {
+      heading: 'How Nuva Compares to Market Produce',
+      col1: 'Purity Standard',
+      col2: 'Nuva Certified Harvest',
+      col3: 'Standard Market Produce',
+      row1_label: 'Cleaning Method',
+      row1_nuva: 'Triple Ozone (O₃) + RO Bubble Wash',
+      row1_market: 'Untreated tap water or chemical wax dip',
+      row2_label: 'Pesticide Residue',
+      row2_nuva: '0.00 ppm (HPLC Certified Clean)',
+      row2_market: 'Common allowable pesticide residue levels',
+      row3_label: 'Harvest to Doorstep',
+      row3_nuva: 'Under 12 Hours Direct',
+      row3_market: '3 to 7 days across middlemen & mandis',
+      row4_label: 'Packaging',
+      row4_nuva: 'Zero-Plastic Breathable Bio-Film',
+      row4_market: 'Single-use plastic suffocation bags'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'pdp.faq',
+    page: 'PRODUCT DETAIL',
+    title: 'Product FAQ Header',
+    subtitle: 'Heading above the accordion. The questions themselves live in Admin → FAQs.',
+    fieldsSchema: [
+      { name: 'heading', label: 'Section Heading', type: 'text' }
+    ],
+    defaultFields: { heading: 'Frequently Asked Questions' },
+    fields: { heading: 'Frequently Asked Questions' },
+    isEdited: false
+  },
+  {
+    sectionKey: 'pdp.reviews',
+    page: 'PRODUCT DETAIL',
+    title: 'Reviews Summary Banner',
+    subtitle: 'Rating score, verified-ratings count, trust bullets, and review-form button labels.',
+    fieldsSchema: [
+      { name: 'ratingScore', label: 'Headline Rating', type: 'text', helperText: 'e.g. 4.9' },
+      { name: 'ratingCount', label: 'Ratings Count Caption', type: 'text' },
+      { name: 'highlight1', label: 'Trust Bullet 1', type: 'text' },
+      { name: 'highlight2', label: 'Trust Bullet 2', type: 'text' },
+      { name: 'highlight3', label: 'Trust Bullet 3', type: 'text' },
+      { name: 'ctaLabel', label: 'Write Review Button', type: 'text' },
+      { name: 'ctaCloseLabel', label: 'Close Form Button', type: 'text' }
+    ],
+    defaultFields: {
+      ratingScore: '4.9',
+      ratingCount: '1,248 Verified Ratings',
+      highlight1: '🌱 99% Verified Customer Satisfaction',
+      highlight2: '✨ 100% Pesticide-Free Guarantee',
+      highlight3: '🚚 12-Hour Cold Dispatch',
+      ctaLabel: 'Write a Verified Review',
+      ctaCloseLabel: 'Close Review Form'
+    },
+    fields: {
+      ratingScore: '4.9',
+      ratingCount: '1,248 Verified Ratings',
+      highlight1: '🌱 99% Verified Customer Satisfaction',
+      highlight2: '✨ 100% Pesticide-Free Guarantee',
+      highlight3: '🚚 12-Hour Cold Dispatch',
+      ctaLabel: 'Write a Verified Review',
+      ctaCloseLabel: 'Close Review Form'
     },
     isEdited: false
   },
@@ -820,18 +1031,21 @@ export const MASTER_CMS_SECTIONS = [
     sectionKey: 'contact.info',
     page: 'CONTACT',
     title: 'Processing Unit & Office Locations',
-    subtitle: 'Anand processing unit, Vadodara office, and offline store details.',
+    subtitle: 'Company name, Anand processing unit, Vadodara office, and offline store details.',
     fieldsSchema: [
+      { name: 'companyName', label: 'Company Name', type: 'text' },
       { name: 'processingUnit', label: 'Processing Unit Address', type: 'textarea' },
       { name: 'mainOffice', label: 'Main Office Address', type: 'textarea' },
       { name: 'offlineStore', label: 'Offline Store Address', type: 'textarea' }
     ],
     defaultFields: {
+      companyName: 'NuvaNutrition Pvt. Ltd',
       processingUnit: 'Kaival Society, Anand, Gujarat 388330',
       mainOffice: '4th Floor, Pancham Icon, Vasna Rd, beside D Mart Mall, Vadodara, Gujarat 390007',
       offlineStore: 'Shop No.184 Radhakrishna Flat , Productivity Road, Near Akota Garden, Vadodara, Gujarat 390020'
     },
     fields: {
+      companyName: 'NuvaNutrition Pvt. Ltd',
       processingUnit: 'Kaival Society, Anand, Gujarat 388330',
       mainOffice: '4th Floor, Pancham Icon, Vasna Rd, beside D Mart Mall, Vadodara, Gujarat 390007',
       offlineStore: 'Shop No.184 Radhakrishna Flat , Productivity Road, Near Akota Garden, Vadodara, Gujarat 390020'
@@ -840,6 +1054,247 @@ export const MASTER_CMS_SECTIONS = [
   },
 
   // 12. FOOTER
+  {
+    sectionKey: 'about.ozone_usp',
+    page: 'ABOUT US',
+    title: 'Why Us — Ozonized Washing',
+    subtitle: 'Section heading and the green ozone-technology explainer card.',
+    fieldsSchema: [
+      { name: 'eyebrow', label: 'Eyebrow Label', type: 'text' },
+      { name: 'heading', label: 'Section Heading', type: 'text' },
+      { name: 'subheading', label: 'Section Subheading', type: 'text' },
+      { name: 'cardTitle', label: 'Card Title', type: 'text' },
+      { name: 'para1', label: 'Paragraph 1', type: 'textarea' },
+      { name: 'para2', label: 'Paragraph 2', type: 'textarea' },
+      { name: 'image', label: 'Side Photo', type: 'image' }
+    ],
+    defaultFields: {
+      eyebrow: 'Clean Tech Purity',
+      heading: 'Why Us - USP',
+      subheading: 'Discover our standard for 99.9% residual-free food purification.',
+      cardTitle: 'OZONIZED WASHING TECHNOLOGY',
+      para1: 'Ozone (O₃) is a powerful oxidizing agent that reacts with contaminants and breaks them down into harmless substances. Ozone is generated by passing oxygen through a high-voltage electrical field, and is then dissolved in water, creating ozonated water.',
+      para2: 'Fruits and vegetables are then submerged in ozonated water, allowing it to neutralize the contaminants. This process breaks down pesticides, bacteria, viruses, and other pathogens, while preserving crisp natural crunch and vital nutrients.',
+      image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=800&auto=format&fit=crop&q=80'
+    },
+    fields: {
+      eyebrow: 'Clean Tech Purity',
+      heading: 'Why Us - USP',
+      subheading: 'Discover our standard for 99.9% residual-free food purification.',
+      cardTitle: 'OZONIZED WASHING TECHNOLOGY',
+      para1: 'Ozone (O₃) is a powerful oxidizing agent that reacts with contaminants and breaks them down into harmless substances. Ozone is generated by passing oxygen through a high-voltage electrical field, and is then dissolved in water, creating ozonated water.',
+      para2: 'Fruits and vegetables are then submerged in ozonated water, allowing it to neutralize the contaminants. This process breaks down pesticides, bacteria, viruses, and other pathogens, while preserving crisp natural crunch and vital nutrients.',
+      image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=800&auto=format&fit=crop&q=80'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'about.fresh_field',
+    page: 'ABOUT US',
+    title: 'Fresh From Field Section',
+    subtitle: 'Farm-to-doorstep transparency card and its delivery photo.',
+    fieldsSchema: [
+      { name: 'heading', label: 'Card Title', type: 'text' },
+      { name: 'para1', label: 'Paragraph 1', type: 'textarea' },
+      { name: 'para2', label: 'Paragraph 2', type: 'textarea' },
+      { name: 'image', label: 'Delivery Photo', type: 'image' }
+    ],
+    defaultFields: {
+      heading: 'FRESH FROM FIELD-DIRECTLY FROM FARM TO DOORSTEP',
+      para1: 'The Nuva heavily focuses on maintaining transparency with our customers, providing you with the assurance you need when it comes to what you eat. We partner with reliable and trusted farms for the produce, and with no middleman, we carry out all the remaining processes to ensure no mishandling of your produce.',
+      para2: 'From harvesting at sunrise to precision ozone bath and doorstep dispatch within hours, every batch arrives crisp and nutrient-dense.',
+      image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'
+    },
+    fields: {
+      heading: 'FRESH FROM FIELD-DIRECTLY FROM FARM TO DOORSTEP',
+      para1: 'The Nuva heavily focuses on maintaining transparency with our customers, providing you with the assurance you need when it comes to what you eat. We partner with reliable and trusted farms for the produce, and with no middleman, we carry out all the remaining processes to ensure no mishandling of your produce.',
+      para2: 'From harvesting at sunrise to precision ozone bath and doorstep dispatch within hours, every batch arrives crisp and nutrient-dense.',
+      image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'about.cta',
+    page: 'ABOUT US',
+    title: 'About Page Closing CTA',
+    subtitle: 'Bottom call-to-action badge, headline, and shop button.',
+    fieldsSchema: [
+      { name: 'badge', label: 'Badge Pill', type: 'text' },
+      { name: 'heading', label: 'Headline', type: 'text' },
+      { name: 'subtitle', label: 'Supporting Copy', type: 'textarea' },
+      { name: 'buttonLabel', label: 'Button Label', type: 'text' },
+      { name: 'buttonLink', label: 'Button Link', type: 'text', helperText: 'Storefront path, e.g. /shop' }
+    ],
+    defaultFields: {
+      badge: 'Pure Farm Harvest',
+      heading: 'Experience 100% Chemical-Free Produce',
+      subtitle: 'Order farm-fresh harvest directly washed with active ozone micro-bubbles delivered to your doorstep.',
+      buttonLabel: 'Explore The Produce',
+      buttonLink: '/shop'
+    },
+    fields: {
+      badge: 'Pure Farm Harvest',
+      heading: 'Experience 100% Chemical-Free Produce',
+      subtitle: 'Order farm-fresh harvest directly washed with active ozone micro-bubbles delivered to your doorstep.',
+      buttonLabel: 'Explore The Produce',
+      buttonLink: '/shop'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'b2b.catalogue',
+    page: 'B2B',
+    title: 'B2B Offerings Header',
+    subtitle: 'Heading above the wholesale product catalogue grid.',
+    fieldsSchema: [
+      { name: 'eyebrow', label: 'Eyebrow Label', type: 'text' },
+      { name: 'heading', label: 'Section Heading', type: 'text' }
+    ],
+    defaultFields: {
+      eyebrow: 'Commercial Procurement',
+      heading: 'What We Offer'
+    },
+    fields: {
+      eyebrow: 'Commercial Procurement',
+      heading: 'What We Offer'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'b2b.brands',
+    page: 'B2B',
+    title: 'Trusted Brands Header',
+    subtitle: 'Heading above the restaurant and retail partner logo wall.',
+    fieldsSchema: [
+      { name: 'eyebrow', label: 'Eyebrow Label', type: 'text' },
+      { name: 'heading', label: 'Section Heading', type: 'text' },
+      { name: 'description', label: 'Supporting Copy', type: 'textarea' }
+    ],
+    defaultFields: {
+      eyebrow: 'Institutional Validation',
+      heading: 'Where Top Brands Place Their Trust',
+      description: 'Trusted daily by premier restaurants, boutique cafes, premium gourmet supermarkets, and culinary pioneers across Gujarat.'
+    },
+    fields: {
+      eyebrow: 'Institutional Validation',
+      heading: 'Where Top Brands Place Their Trust',
+      description: 'Trusted daily by premier restaurants, boutique cafes, premium gourmet supermarkets, and culinary pioneers across Gujarat.'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'b2b.certifications',
+    page: 'B2B',
+    title: 'B2B Certifications Banner',
+    subtitle: 'Dark green accreditation strip heading and subtitle.',
+    fieldsSchema: [
+      { name: 'heading', label: 'Section Heading', type: 'text' },
+      { name: 'description', label: 'Supporting Copy', type: 'textarea' }
+    ],
+    defaultFields: {
+      heading: 'Excellence Isn\'t Claimed — It’s Certified',
+      description: 'Third-party accredited standards ensure 100% safety and regulatory compliance for every supply contract.'
+    },
+    fields: {
+      heading: 'Excellence Isn\'t Claimed — It’s Certified',
+      description: 'Third-party accredited standards ensure 100% safety and regulatory compliance for every supply contract.'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'b2b.hubs',
+    page: 'B2B (WHOLESALE)',
+    title: 'B2B Facilities & Office Hubs',
+    subtitle: 'Partnership desk heading plus head office, processing unit, and retail addresses.',
+    fieldsSchema: [
+      { name: 'eyebrow', label: 'Eyebrow Label', type: 'text' },
+      { name: 'heading', label: 'Section Heading', type: 'text' },
+      { name: 'description', label: 'Supporting Copy', type: 'textarea' },
+      { name: 'headOffice', label: 'Head Office Address', type: 'textarea' },
+      { name: 'processingUnit', label: 'Processing Unit Address', type: 'textarea' },
+      { name: 'retailOutlet', label: 'Retail Outlet Address', type: 'textarea' }
+    ],
+    defaultFields: {
+      eyebrow: 'Institutional Desk',
+      heading: 'NUVA B2B Partnerships',
+      description: 'Connect with our procurement leads to receive sample kits, scheduled morning delivery slots, and tier-1 bulk pricing.',
+      headOffice: '4th floor, Pancham Icon, Beside D Mart Mall, Vasna Road, Vadodara, Gujarat - 390007',
+      processingUnit: 'Kaival Society, Anand, Gujarat - 388330',
+      retailOutlet: 'Shop No.184 Radhakrishna Flat, Productivity Road, Nr. Akota Garden, Vadodara, Gujarat - 390020'
+    },
+    fields: {
+      eyebrow: 'Institutional Desk',
+      heading: 'NUVA B2B Partnerships',
+      description: 'Connect with our procurement leads to receive sample kits, scheduled morning delivery slots, and tier-1 bulk pricing.',
+      headOffice: '4th floor, Pancham Icon, Beside D Mart Mall, Vasna Road, Vadodara, Gujarat - 390007',
+      processingUnit: 'Kaival Society, Anand, Gujarat - 388330',
+      retailOutlet: 'Shop No.184 Radhakrishna Flat, Productivity Road, Nr. Akota Garden, Vadodara, Gujarat - 390020'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'b2b.thankyou',
+    page: 'B2B',
+    title: 'B2B Closing Strip',
+    subtitle: 'Bottom thank-you banner headline and tagline.',
+    fieldsSchema: [
+      { name: 'heading', label: 'Headline', type: 'text' },
+      { name: 'subtitle', label: 'Tagline', type: 'text' }
+    ],
+    defaultFields: {
+      heading: 'THANK YOU!',
+      subtitle: 'Nuva Nutrition Pvt. Ltd. — Rethink Your Food.'
+    },
+    fields: {
+      heading: 'THANK YOU!',
+      subtitle: 'Nuva Nutrition Pvt. Ltd. — Rethink Your Food.'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'contact.form',
+    page: 'CONTACT',
+    title: 'Contact Form Header',
+    subtitle: 'Heading above the email form and its success confirmation message.',
+    fieldsSchema: [
+      { name: 'heading', label: 'Section Heading', type: 'text' },
+      { name: 'successMessage', label: 'Success Message', type: 'textarea' }
+    ],
+    defaultFields: {
+      heading: 'Questions? Send us an email',
+      successMessage: 'Thank you! Your message has been sent successfully.'
+    },
+    fields: {
+      heading: 'Questions? Send us an email',
+      successMessage: 'Thank you! Your message has been sent successfully.'
+    },
+    isEdited: false
+  },
+  {
+    sectionKey: 'contact.features',
+    page: 'CONTACT',
+    title: 'Service Promise Strip',
+    subtitle: 'The four-icon shipping, saving, support, and payment strip.',
+    fieldsSchema: [
+      { name: 'feature1', label: 'Feature 1 Label', type: 'text' },
+      { name: 'feature2', label: 'Feature 2 Label', type: 'text' },
+      { name: 'feature3', label: 'Feature 3 Label', type: 'text' },
+      { name: 'feature4', label: 'Feature 4 Label', type: 'text' }
+    ],
+    defaultFields: {
+      feature1: 'Free Shipping',
+      feature2: 'Big Saving',
+      feature3: 'Online Support',
+      feature4: 'Flexible Payment'
+    },
+    fields: {
+      feature1: 'Free Shipping',
+      feature2: 'Big Saving',
+      feature3: 'Online Support',
+      feature4: 'Flexible Payment'
+    },
+    isEdited: false
+  },
   {
     sectionKey: 'footer.contact',
     page: 'FOOTER',

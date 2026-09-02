@@ -6,6 +6,7 @@ import { ShopCatalogSkeleton } from '../components/common/Skeleton';
 import { useSearchParams } from 'react-router-dom';
 import rawCsvProducts from '../data/csvProducts.json';
 import { STORE_TOPICS, subscribeToStoreChanges } from '../lib/storeSync';
+import { useContent } from '../context/ContentContext';
 
 // Shown only until the live category list arrives, so the filter bar is never
 // empty on first paint. The admin's categories replace these outright — they
@@ -23,6 +24,7 @@ const PLACEHOLDER_CATEGORIES = [
 const norm = (value) => String(value ?? '').trim().toLowerCase();
 
 const ShopPage = () => {
+  const { getContent } = useContent();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialCategory = searchParams.get('category') || 'All';
 
@@ -95,9 +97,13 @@ const ShopPage = () => {
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Header */}
-        <div className="space-y-1.5">
-          <h1 className="text-3xl sm:text-5xl font-bold text-[#2d472c] font-display tracking-tight">Pure Farm Catalog</h1>
-          <p className="text-xs sm:text-sm text-neutral-600">Filter 100% chemical-free staples & ozone sanitized harvest batches.</p>
+        <div data-section-key="shop.header" className="space-y-1.5">
+          <h1 className="text-3xl sm:text-5xl font-bold text-[#2d472c] font-display tracking-tight">
+            {getContent('shop.header', 'title', 'Pure Farm Catalog')}
+          </h1>
+          <p className="text-xs sm:text-sm text-neutral-600">
+            {getContent('shop.header', 'subtitle', 'Filter 100% chemical-free staples & ozone sanitized harvest batches.')}
+          </p>
         </div>
 
         {/* Control Bar */}

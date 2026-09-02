@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ChevronDown, ChevronRight, Search, Eye, EyeOff, Smartphone, Tablet, Laptop,
   Plus, ArrowLeft, Save, Check, X, Layers, Sparkles, ExternalLink, Undo2,
@@ -11,6 +12,7 @@ import API from '../../api/axiosInstance';
 import { STORE_TOPICS, publishStoreChange } from '../../lib/storeSync';
 import { MASTER_CMS_SECTIONS } from '../../data/defaultMasterSections';
 import { ContentContext, useContent } from '../../context/ContentContext';
+import { Skeleton } from '../../components/common/Skeleton';
 
 import Navbar from '../../components/common/Navbar';
 import Footer from '../../components/common/Footer';
@@ -28,6 +30,7 @@ import InstagramFollowSection from '../../components/home/InstagramFollowSection
 import ProductCard from '../../components/home/ProductCard';
 import OurStoryPage from '../OurStoryPage';
 import ShopPage from '../ShopPage';
+import ProductDetailPage from '../ProductDetailPage';
 import ContactPage from '../ContactPage';
 import B2BPage from '../B2BPage';
 import BlogPage from '../BlogPage';
@@ -42,6 +45,7 @@ const EDITOR_PAGES = [
   { id: 'home', label: 'Home page', cmsPages: ['HOME PAGE'], route: '/' },
   { id: 'about', label: 'About us', cmsPages: ['ABOUT US'], route: '/our-story' },
   { id: 'shop', label: 'Products / Shop', cmsPages: ['SHOP'], route: '/shop' },
+  { id: 'product', label: 'Product page', cmsPages: ['PRODUCT DETAIL'], route: '/shop' },
   { id: 'b2b', label: 'B2B / B2C Partner', cmsPages: ['B2B', 'B2B (WHOLESALE)'], route: '/b2b' },
   { id: 'contact', label: 'Contact us', cmsPages: ['CONTACT'], route: '/contact-us' },
   { id: 'blog', label: 'Blog', cmsPages: ['BLOG'], route: '/blogs' }
@@ -54,10 +58,12 @@ const SECTION_ORDER = [
   'home.hero', 'home.purity', 'home.farmers', 'home.regenerative', 'home.video',
   'home.testimonials', 'home.video_shopping', 'home.uv_ozone', 'home.certifications',
   'home.blog', 'home.instagram',
-  'about.hero', 'about.story', 'about.facilities', 'about.sustainable_packaging', 'about.farmers_support',
+  'about.hero', 'about.story', 'about.facilities', 'about.ozone_usp', 'about.sustainable_packaging',
+  'about.fresh_field', 'about.farmers_support', 'about.cta',
   'shop.header',
-  'b2b.hero', 'b2b.process', 'b2b.hubs',
-  'contact.info',
+  'pdp.hero', 'pdp.promo', 'pdp.pillars', 'pdp.comparison', 'pdp.faq', 'pdp.reviews',
+  'b2b.hero', 'b2b.process', 'b2b.catalogue', 'b2b.brands', 'b2b.certifications', 'b2b.hubs', 'b2b.thankyou',
+  'contact.form', 'contact.info', 'contact.features',
   'blog.hero',
   'footer.contact'
 ];
@@ -78,15 +84,38 @@ const SECTION_ICONS = {
   'home.instagram': Instagram,
   'about.hero': Sparkles,
   'about.story': Users,
+  'about.facilities': Store,
+  'about.ozone_usp': Shield,
+  'about.sustainable_packaging': Package,
+  'about.fresh_field': Video,
+  'about.farmers_support': Users,
+  'about.cta': Megaphone,
+  'b2b.catalogue': LayoutGrid,
+  'b2b.brands': Award,
+  'b2b.certifications': Shield,
+  'b2b.hubs': Store,
+  'b2b.thankyou': Megaphone,
+  'contact.form': Type,
+  'contact.features': Columns,
   'shop.header': Store,
+  'pdp.hero': Package,
+  'pdp.promo': Megaphone,
+  'pdp.pillars': Shield,
+  'pdp.comparison': Columns,
+  'pdp.faq': FileText,
+  'pdp.reviews': Star,
   'contact.info': Phone,
   'footer.contact': PanelBottom
 };
 
+/* Real device viewports. The preview frame keeps its height rather than growing
+   to fit its content: it makes `100vh` inside the storefront mean what it means
+   on the device, and it stops a `min-h-screen` section from feeding its own
+   height back into the frame. */
 const VIEWPORTS = {
-  desktop: { width: '100%', label: 'Desktop', icon: Laptop },
-  tablet: { width: '820px', label: 'Tablet', icon: Tablet },
-  mobile: { width: '390px', label: 'Mobile', icon: Smartphone }
+  desktop: { width: '100%', height: 900, label: 'Desktop', icon: Laptop },
+  tablet: { width: '820px', height: 1100, label: 'Tablet', icon: Tablet },
+  mobile: { width: '390px', height: 844, label: 'Mobile', icon: Smartphone }
 };
 
 const deepClone = (value) => JSON.parse(JSON.stringify(value ?? {}));
@@ -213,12 +242,162 @@ const BestsellerGrid = ({ products }) => (
 );
 
 /* ═══════════════════════════════════════════════════════════════════
+   PREVIEW FRAME
+   The storefront is rendered inside an iframe rather than a plain div.
+   Tailwind's breakpoints key off the viewport, so a 390px-wide div still
+   lays the page out as desktop — full nav links, clipped announcement
+   bar, squeezed grids. An iframe gives the preview a real viewport of
+   the chosen device width, so `sm:` / `md:` / `lg:` resolve the way they
+   do on a phone.
+
+   Children are portalled in, so React context (the unsaved-draft content
+   provider) still reaches them. React's synthetic events do not cross
+   into another document, which is why the editor listens on the frame's
+   own document below — and why the storefront's own click handlers stay
+   inert inside the canvas.
+═══════════════════════════════════════════════════════════════════ */
+const PREVIEW_HTML =
+  '<!doctype html><html><head><base href="/"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body class="editor-canvas-frame"></body></html>';
+
+// Cheap fingerprint of the admin's stylesheets, so they are only re-cloned
+// into the frame when Vite actually swaps one out.
+const styleSignature = () =>
+  Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+    .map((node) => (node.tagName === 'LINK' ? node.href : node.textContent.length))
+    .join('|');
+
+const PreviewFrame = ({ onDocument, height, children }) => {
+  const frameRef = useRef(null);
+  const signatureRef = useRef('');
+  const [body, setBody] = useState(null);
+
+  useEffect(() => {
+    const iframe = frameRef.current;
+    if (!iframe) return undefined;
+
+    let headObserver;
+
+    const syncStyles = (doc) => {
+      const signature = styleSignature();
+      if (signature === signatureRef.current) return;
+      signatureRef.current = signature;
+      doc.head.querySelectorAll('[data-editor-style]').forEach((n) => n.remove());
+      document.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => {
+        const clone = node.cloneNode(true);
+        clone.setAttribute('data-editor-style', '');
+        doc.head.appendChild(clone);
+      });
+    };
+
+    const attach = () => {
+      const doc = iframe.contentDocument;
+      // Every frame starts life as about:blank before srcDoc lands. Only the
+      // real document carries this class, and mounting the storefront into the
+      // blank one would just be thrown away a tick later.
+      if (!doc?.body?.classList.contains('editor-canvas-frame')) return;
+
+      headObserver?.disconnect();
+      signatureRef.current = '';
+      syncStyles(doc);
+      setBody(doc.body);
+      onDocument(doc);
+
+      headObserver = new MutationObserver(() => syncStyles(doc));
+      headObserver.observe(document.head, { childList: true, subtree: true });
+    };
+
+    if (iframe.contentDocument?.readyState === 'complete') attach();
+    iframe.addEventListener('load', attach);
+
+    return () => {
+      iframe.removeEventListener('load', attach);
+      headObserver?.disconnect();
+      onDocument(null);
+    };
+  }, [onDocument]);
+
+  return (
+    <>
+      <iframe
+        ref={frameRef}
+        srcDoc={PREVIEW_HTML}
+        title="Storefront preview"
+        className="block w-full border-0 bg-white"
+        style={{ height: `${height}px` }}
+        scrolling="yes"
+      />
+      {body && createPortal(children, body)}
+    </>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   LOADING STATES
+   The editor paints the shape of the tree and the page it is about to
+   show rather than a spinner, so nothing shifts once content lands.
+═══════════════════════════════════════════════════════════════════ */
+const SectionTreeSkeleton = () => (
+  <div className="space-y-4">
+    {[4, 6].map((rows, groupIdx) => (
+      <div key={groupIdx} className="space-y-1">
+        <div className="px-2 py-1">
+          <Skeleton tone="admin" className="h-2.5 w-24" rounded="rounded" />
+        </div>
+        {Array.from({ length: rows }).map((_, idx) => (
+          <div key={idx} className="flex items-center gap-2 px-2 py-1.5">
+            <span className="w-4 shrink-0" />
+            <Skeleton tone="admin" className="h-3.5 w-3.5 shrink-0" rounded="rounded" />
+            <Skeleton
+              tone="admin"
+              className={`h-3 ${['w-28', 'w-20', 'w-32', 'w-24'][idx % 4]}`}
+              rounded="rounded"
+            />
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>
+);
+
+const CanvasSkeleton = () => (
+  <div className="p-6 space-y-8">
+    <div className="flex items-center justify-between gap-6">
+      <Skeleton tone="admin" className="h-6 w-32" rounded="rounded-md" />
+      <div className="hidden sm:flex items-center gap-4">
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} tone="admin" className="h-3 w-16" rounded="rounded" />
+        ))}
+      </div>
+    </div>
+
+    <Skeleton tone="admin" className="h-64 w-full" rounded="rounded-2xl" />
+
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="space-y-3">
+          <Skeleton tone="admin" className="aspect-square w-full" rounded="rounded-xl" />
+          <Skeleton tone="admin" className="h-3 w-3/4" rounded="rounded" />
+          <Skeleton tone="admin" className="h-3 w-1/2" rounded="rounded" />
+        </div>
+      ))}
+    </div>
+
+    <div className="space-y-3">
+      <Skeleton tone="admin" className="h-5 w-56 mx-auto" rounded="rounded-md" />
+      <Skeleton tone="admin" className="h-3 w-80 max-w-full mx-auto" rounded="rounded" />
+    </div>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════════════════
    CANVAS SECTION FRAME
    Declared at module scope on purpose: an inline component would get a
    fresh identity on every keystroke and remount the whole storefront
    section underneath it (killing videos, carousels and scroll position).
 ═══════════════════════════════════════════════════════════════════ */
-const SectionFrame = ({ sectionKey, title, isActive, isHover, nodesRef, children }) => (
+// The hovered section is named by the floating "Edit …" badge the canvas
+// draws over it, so the frame itself only carries the outline.
+const SectionFrame = ({ sectionKey, isActive, isHover, nodesRef, children }) => (
   <div
     data-editor-section={sectionKey}
     ref={(el) => { nodesRef.current[sectionKey] = el; }}
@@ -230,15 +409,6 @@ const SectionFrame = ({ sectionKey, title, isActive, isHover, nodesRef, children
           : ''
     }`}
   >
-    {(isActive || isHover) && title && (
-      <span
-        className={`absolute left-0 top-0 z-20 px-2 py-0.5 text-[10px] font-bold text-white rounded-br-md shadow-sm pointer-events-none ${
-          isActive ? 'bg-[#005bd3]' : 'bg-[#005bd3]/60'
-        }`}
-      >
-        {title}
-      </span>
-    )}
     {children}
   </div>
 );
@@ -267,13 +437,23 @@ const WebsiteEditor = () => {
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bestsellers, setBestsellers] = useState(HOME_FALLBACK_BESTSELLERS);
+  const [previewProductId, setPreviewProductId] = useState(null);
 
-  const canvasRef = useRef(null);
+  const [hoverBox, setHoverBox] = useState(null);
+  const [previewDoc, setPreviewDoc] = useState(null);
+
+  const deviceFrameRef = useRef(null);
+  const inspectorRef = useRef(null);
   const sectionNodes = useRef({});
   const treeNodes = useRef({});
   const pageMenuRef = useRef(null);
 
   const activePage = EDITOR_PAGES.find((p) => p.id === pageId) || EDITOR_PAGES[0];
+
+  // The product page has no single URL — point at the product the canvas shows.
+  const livePageRoute = pageId === 'product' && previewProductId
+    ? `/products/${previewProductId}`
+    : activePage.route;
 
   /* ── Load the section catalogue + seed the draft ─────────────── */
   useEffect(() => {
@@ -292,7 +472,12 @@ const WebsiteEditor = () => {
               ...remote,
               // The bundled master catalogue is the source of truth for the form
               // schema; the database only owns the saved values.
-              fieldsSchema: (remote.fieldsSchema?.length ? remote.fieldsSchema : local?.fieldsSchema) || []
+              fieldsSchema: (remote.fieldsSchema?.length ? remote.fieldsSchema : local?.fieldsSchema) || [],
+              defaultFields: local?.defaultFields || remote.defaultFields,
+              // A field the database has never stored falls back to the bundled
+              // default — which is the copy the live page is showing — so a new
+              // control is never presented as an empty box.
+              fields: { ...(local?.defaultFields || {}), ...(remote.fields || {}) }
             });
           });
           merged = Array.from(byKey.values());
@@ -322,6 +507,18 @@ const WebsiteEditor = () => {
       .then(({ data }) => {
         if (cancelled) return;
         if (data?.success && data.products?.length > 0) setBestsellers(data.products.slice(0, 4));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  /* ── The product the canvas previews, so "open live" lands on it ─ */
+  useEffect(() => {
+    let cancelled = false;
+    API.get('/products?limit=1')
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.success && data.products?.length > 0) setPreviewProductId(data.products[0]._id);
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -399,28 +596,101 @@ const WebsiteEditor = () => {
     const framed = sectionNodes.current[sectionKey];
     if (framed) return framed;
     try {
-      return canvasRef.current?.querySelector(`[data-section-key="${CSS.escape(sectionKey)}"]`) || null;
+      return previewDoc?.querySelector(`[data-section-key="${CSS.escape(sectionKey)}"]`) || null;
     } catch (e) {
       return null;
     }
-  }, []);
+  }, [previewDoc]);
 
+  // A node's position inside the frame, expressed in the canvas pane's own
+  // coordinates. The frame never scrolls internally, so its rect plus the
+  // node's rect is the whole story.
+  const canvasOffsetOf = useCallback((node) => {
+    const frameEl = previewDoc?.defaultView?.frameElement;
+    if (!node || !frameEl) return null;
+    const frameBox = frameEl.getBoundingClientRect();
+    const nodeBox = node.getBoundingClientRect();
+    return {
+      top: frameBox.top + nodeBox.top,
+      left: frameBox.left + nodeBox.left,
+      width: nodeBox.width,
+      height: nodeBox.height
+    };
+  }, [previewDoc]);
+
+  // The frame is a device viewport that scrolls on its own, so bringing a
+  // section into view means scrolling inside it, not the admin pane.
   const scrollCanvasTo = useCallback((sectionKey) => {
-    const container = canvasRef.current;
+    const win = previewDoc?.defaultView;
     const node = findCanvasNode(sectionKey);
-    if (!container || !node) return;
-    const top = node.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 24;
-    container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
-  }, [findCanvasNode]);
+    if (!win || !node) return;
+    const top = win.scrollY + node.getBoundingClientRect().top - 12;
+    win.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }, [previewDoc, findCanvasNode]);
 
-  // Outline nested (frameless) sections too, so every selection is visible.
+  // Nested (frameless) sections — the announcement bar inside the navbar, every
+  // block of the product page — get the same selection, hover and hide
+  // treatment as framed ones, driven by class names instead of a wrapper.
   useEffect(() => {
-    const root = canvasRef.current;
+    const root = previewDoc?.body;
     if (!root) return;
-    root.querySelectorAll('.nuva-editor-selected').forEach((n) => n.classList.remove('nuva-editor-selected'));
-    const node = findCanvasNode(selection.sectionKey);
-    if (node && !node.hasAttribute('data-editor-section')) node.classList.add('nuva-editor-selected');
-  }, [selection.sectionKey, findCanvasNode, pageId, draft, hiddenKeys]);
+
+    const MARKS = ['nuva-editor-selected', 'nuva-editor-hover', 'nuva-editor-hidden'];
+    MARKS.forEach((cls) => root.querySelectorAll(`.${cls}`).forEach((n) => n.classList.remove(cls)));
+
+    const mark = (sectionKey, cls) => {
+      const node = sectionKey ? findCanvasNode(sectionKey) : null;
+      if (node && !node.hasAttribute('data-editor-section')) node.classList.add(cls);
+    };
+
+    hiddenKeys.forEach((key) => mark(key, 'nuva-editor-hidden'));
+    mark(selection.sectionKey, 'nuva-editor-selected');
+    if (hoverKey && hoverKey !== selection.sectionKey) mark(hoverKey, 'nuva-editor-hover');
+  }, [previewDoc, selection.sectionKey, hoverKey, findCanvasNode, pageId, draft, hiddenKeys]);
+
+  /* The "Edit section" badge that tracks the hovered section, the way the
+     Shopify theme editor labels whatever the pointer is over. It is drawn in
+     the admin document, over the frame, so it stays crisp at every viewport. */
+  useEffect(() => {
+    const host = deviceFrameRef.current;
+    const win = previewDoc?.defaultView;
+
+    const place = () => {
+      const position = hoverKey ? canvasOffsetOf(findCanvasNode(hoverKey)) : null;
+      if (!host || !position) {
+        setHoverBox(null);
+        return;
+      }
+      const hostBox = host.getBoundingClientRect();
+      setHoverBox({
+        top: position.top - hostBox.top,
+        left: position.left - hostBox.left,
+        width: position.width,
+        height: position.height
+      });
+    };
+
+    place();
+    if (!win || !hoverKey) return undefined;
+
+    // Scrolling inside the frame moves the section under the badge.
+    let queued = 0;
+    const onScroll = () => {
+      if (queued) return;
+      queued = win.requestAnimationFrame(() => { queued = 0; place(); });
+    };
+    win.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      win.cancelAnimationFrame(queued);
+      win.removeEventListener('scroll', onScroll);
+    };
+  }, [previewDoc, hoverKey, findCanvasNode, canvasOffsetOf, pageId, viewport, draft, hiddenKeys]);
+
+  // Every new selection starts the edit form at the top rather than wherever
+  // the previous section had been scrolled to.
+  useEffect(() => {
+    inspectorRef.current?.scrollTo({ top: 0 });
+  }, [selection.sectionKey, selection.group, selection.index]);
 
   const selectSection = useCallback((sectionKey, options = {}) => {
     if (!sectionKey) return;
@@ -441,7 +711,7 @@ const WebsiteEditor = () => {
       .filter((s) => next.cmsPages.includes(s.page))
       .sort((a, b) => orderOf(a.sectionKey) - orderOf(b.sectionKey))[0];
     setSelection({ sectionKey: first?.sectionKey || 'sitewide.header', group: null, index: null });
-    canvasRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    previewDoc?.defaultView?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   /* ── Draft mutations ─────────────────────────────────────────── */
@@ -598,32 +868,43 @@ const WebsiteEditor = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [handleSave]);
 
-  /* ── Canvas interaction: click / hover any section to edit ───── */
-  const resolveSectionKey = (target) => {
+  /* ── Canvas interaction: click / hover any section to edit ─────
+     Listeners live on the preview frame's own document. React's synthetic
+     events never reach across the frame boundary, and going native also
+     lets the capture phase swallow the storefront's own handlers. */
+  const resolveSectionKey = useCallback((target) => {
     if (!target || typeof target.closest !== 'function') return null;
     const explicit = target.closest('[data-section-key]');
     const explicitKey = explicit?.getAttribute('data-section-key');
     if (explicitKey && catalogMap[explicitKey]) return explicitKey;
     return target.closest('[data-editor-section]')?.getAttribute('data-editor-section') || null;
-  };
+  }, [catalogMap]);
 
-  const handleCanvasClick = (e) => {
-    // The canvas renders real storefront components — never let their links
-    // or forms navigate the admin away from the editor.
-    const anchor = typeof e.target?.closest === 'function' ? e.target.closest('a') : null;
-    if (anchor) e.preventDefault();
+  useEffect(() => {
+    if (!previewDoc) return undefined;
 
-    const key = resolveSectionKey(e.target);
-    if (key) {
-      e.stopPropagation();
-      selectSection(key, { scroll: false });
-    }
-  };
+    const onClick = (e) => {
+      // The frame renders real storefront components — never let their links
+      // or forms navigate the preview away from the page being edited.
+      const anchor = typeof e.target?.closest === 'function' ? e.target.closest('a') : null;
+      if (anchor) e.preventDefault();
 
-  const handleCanvasHover = (e) => {
-    const key = resolveSectionKey(e.target);
-    setHoverKey(key);
-  };
+      const key = resolveSectionKey(e.target);
+      if (key) {
+        e.stopPropagation();
+        selectSection(key, { scroll: false });
+      }
+    };
+
+    const onOver = (e) => setHoverKey(resolveSectionKey(e.target));
+
+    previewDoc.addEventListener('click', onClick, true);
+    previewDoc.addEventListener('mouseover', onOver);
+    return () => {
+      previewDoc.removeEventListener('click', onClick, true);
+      previewDoc.removeEventListener('mouseover', onOver);
+    };
+  }, [previewDoc, resolveSectionKey, selectSection]);
 
   /* ── Canvas frame wrapper ────────────────────────────────────── */
   const frame = (sectionKey, children) => {
@@ -633,7 +914,6 @@ const WebsiteEditor = () => {
       <SectionFrame
         key={sectionKey}
         sectionKey={sectionKey}
-        title={catalogMap[sectionKey]?.title}
         isActive={isActive}
         isHover={hoverKey === sectionKey && !isActive}
         nodesRef={sectionNodes}
@@ -668,21 +948,19 @@ const WebsiteEditor = () => {
       );
     }
 
+    // Every other page marks its own blocks with data-section-key, so they
+    // render unframed and each block stays individually selectable — one outer
+    // frame would instead make the whole page a single click target.
     const PageComponent = {
       about: OurStoryPage,
       shop: ShopPage,
+      product: ProductDetailPage,
       b2b: B2BPage,
       contact: ContactPage,
       blog: BlogPage
     }[pageId];
 
-    if (!PageComponent) return null;
-    // Derived from the full catalogue (not the search-filtered tree) so typing
-    // in the section filter never changes what the canvas is anchored to.
-    const primaryKey = catalog
-      .filter((s) => activePage.cmsPages.includes(s.page))
-      .sort((a, b) => orderOf(a.sectionKey) - orderOf(b.sectionKey))[0]?.sectionKey || `${pageId}.page`;
-    return frame(primaryKey, <PageComponent />);
+    return PageComponent ? <PageComponent /> : null;
   };
 
   /* ── Inspector: one field control per schema entry ───────────── */
@@ -791,6 +1069,23 @@ const WebsiteEditor = () => {
   };
 
   const renderInspector = () => {
+    if (loading) {
+      return (
+        <div className="p-4 space-y-5">
+          <div className="pb-3 border-b border-neutral-100 space-y-2">
+            <Skeleton tone="admin" className="h-4 w-40" rounded="rounded-md" />
+            <Skeleton tone="admin" className="h-2.5 w-52" rounded="rounded" />
+          </div>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="space-y-1.5">
+              <Skeleton tone="admin" className="h-2.5 w-24" rounded="rounded" />
+              <Skeleton tone="admin" className="h-9 w-full" rounded="rounded-lg" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     if (!activeSection) {
       return (
         <div className="h-full flex flex-col items-center justify-center text-center px-6 py-12 gap-2">
@@ -988,7 +1283,7 @@ const WebsiteEditor = () => {
             </span>
           )}
           <a
-            href={activePage.route}
+            href={livePageRoute}
             target="_blank"
             rel="noopener noreferrer"
             title="Open this page on the live website"
@@ -1038,11 +1333,7 @@ const WebsiteEditor = () => {
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar p-2 space-y-4">
-            {loading && (
-              <div className="flex items-center gap-2 px-2 py-4 text-[11px] text-neutral-400">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading sections…
-              </div>
-            )}
+            {loading && <SectionTreeSkeleton />}
 
             {!loading && groups.length === 0 && (
               <p className="px-2 py-4 text-[11px] text-neutral-400">No sections match “{query}”.</p>
@@ -1164,7 +1455,7 @@ const WebsiteEditor = () => {
 
         {/* ── PANE 2: INSPECTOR ── */}
         <div className="w-80 shrink-0 bg-white border-r border-[#d8d8d8] flex flex-col min-h-0 z-10">
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
+          <div ref={inspectorRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
             {renderInspector()}
           </div>
 
@@ -1187,23 +1478,51 @@ const WebsiteEditor = () => {
         </div>
 
         {/* ── PANE 3: LIVE CANVAS ── */}
-        <div
-          ref={canvasRef}
-          className="flex-1 min-w-0 min-h-0 bg-[#eaeaea] overflow-y-auto overscroll-contain custom-scrollbar"
-        >
+        <div className="flex-1 min-w-0 min-h-0 bg-[#eaeaea] overflow-y-auto overscroll-contain custom-scrollbar">
           <div className="flex justify-center p-3 sm:p-6">
             <div
+              ref={deviceFrameRef}
               style={{ width: VIEWPORTS[viewport].width, maxWidth: '1360px' }}
-              onClickCapture={handleCanvasClick}
-              onMouseOver={handleCanvasHover}
               onMouseLeave={() => setHoverKey(null)}
-              className="editor-canvas-frame bg-white shadow-2xl border border-neutral-300 rounded-md overflow-hidden transition-[width] duration-300 text-neutral-900"
+              className="relative bg-white shadow-2xl border border-neutral-300 rounded-md overflow-hidden transition-[width] duration-300 text-neutral-900"
             >
-              <ContentContext.Provider value={previewContent}>
-                {frame('sitewide.header', <Navbar />)}
-                {renderCanvasBody()}
-                {frame('footer.contact', <Footer />)}
-              </ContentContext.Provider>
+              {/* Hovering any part of the preview names the section under the
+                  pointer and offers to open its settings — clicking anywhere
+                  inside it does the same thing. */}
+              {hoverBox && hoverKey && catalogMap[hoverKey] && (
+                <div
+                  className="absolute z-40 pointer-events-none"
+                  style={{
+                    top: `${hoverBox.top}px`,
+                    left: `${hoverBox.left}px`,
+                    width: `${hoverBox.width}px`,
+                    height: `${hoverBox.height}px`
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); selectSection(hoverKey, { scroll: false }); }}
+                    className="pointer-events-auto absolute top-0 left-0 flex items-center gap-1.5 px-2.5 py-1 rounded-br-lg bg-[#005bd3] hover:bg-[#004bb0] text-white text-[10px] font-bold shadow-md transition-colors"
+                  >
+                    <SlidersHorizontal className="h-3 w-3" />
+                    <span className="max-w-[180px] truncate">
+                      Edit {catalogMap[hoverKey].title}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {loading ? (
+                <CanvasSkeleton />
+              ) : (
+                <PreviewFrame onDocument={setPreviewDoc} height={VIEWPORTS[viewport].height}>
+                  <ContentContext.Provider value={previewContent}>
+                    {frame('sitewide.header', <Navbar />)}
+                    {renderCanvasBody()}
+                    {frame('footer.contact', <Footer />)}
+                  </ContentContext.Provider>
+                </PreviewFrame>
+              )}
             </div>
           </div>
         </div>

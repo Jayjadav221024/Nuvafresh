@@ -227,7 +227,7 @@ const B2BPage = () => {
     <div className="bg-[#fbfaf6] font-sans text-neutral-900 selection:bg-[#2d472c] selection:text-white">
       
       {/* 1. HERO BANNER: India's Cleanest Food Ecosystem for Modern Kitchens & B2B */}
-      <section className="relative bg-[#1c2f21] text-white pt-20 pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section data-section-key="b2b.hero" className="relative bg-[#1c2f21] text-white pt-20 pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-15">
           <img
             src={heroBgImage}
@@ -301,7 +301,7 @@ const B2BPage = () => {
       </section>
 
       {/* 2. THE NUVA PROCESS (Comic-Style Farm to Commercial Kitchen Pipeline) */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <section data-section-key="b2b.process" className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center max-w-3xl mx-auto space-y-3 mb-14">
           <span className="text-xs font-bold uppercase tracking-widest text-[#2d472c]">{processTag}</span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#2d472c] font-display tracking-tight">
@@ -349,14 +349,14 @@ const B2BPage = () => {
       </section>
 
       {/* 3. COMPLETE B2B PRODUCT CATALOGUE / OFFERINGS */}
-      <section className="py-16 sm:py-20 bg-white border-y border-neutral-200 px-4 sm:px-6 lg:px-8">
+      <section data-section-key="b2b.catalogue" className="py-16 sm:py-20 bg-white border-y border-neutral-200 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto space-y-12">
           
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#2d472c]">Commercial Procurement</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-[#2d472c]">{getContent('b2b.catalogue', 'eyebrow', 'Commercial Procurement')}</span>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#2d472c] font-display tracking-tight">
-                What We Offer
+                {getContent('b2b.catalogue', 'heading', 'What We Offer')}
               </h2>
               <p className="text-xs sm:text-sm text-neutral-600 max-w-xl">
                 A wide, premium selection of everyday essentials, gourmet greens, regional staples, and imported exotics — all sanitized, graded, and delivered fresh.
@@ -406,14 +406,14 @@ const B2BPage = () => {
       </section>
 
       {/* 4. TRUSTED BY TOP BRANDS & RESTAURANTS */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <section data-section-key="b2b.brands" className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center space-y-3 mb-12">
-          <span className="text-xs font-bold uppercase tracking-widest text-[#2d472c]">Institutional Validation</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#2d472c]">{getContent('b2b.brands', 'eyebrow', 'Institutional Validation')}</span>
           <h2 className="text-3xl sm:text-4xl font-bold text-[#2d472c] font-display tracking-tight">
-            Where Top Brands Place Their Trust
+            {getContent('b2b.brands', 'heading', 'Where Top Brands Place Their Trust')}
           </h2>
           <p className="text-xs sm:text-sm text-neutral-600 max-w-md mx-auto">
-            Trusted daily by premier restaurants, boutique cafes, premium gourmet supermarkets, and culinary pioneers across Gujarat.
+            {getContent('b2b.brands', 'description', 'Trusted daily by premier restaurants, boutique cafes, premium gourmet supermarkets, and culinary pioneers across Gujarat.')}
           </p>
         </div>
 
@@ -425,14 +425,14 @@ const B2BPage = () => {
       </section>
 
       {/* 5. CERTIFICATIONS: Excellence Isn't Claimed - It's Certified */}
-      <section className="bg-[#2d472c] text-white py-16 px-4 sm:px-6 lg:px-8">
+      <section data-section-key="b2b.certifications" className="bg-[#2d472c] text-white py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto space-y-10">
           <div className="text-center space-y-2">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold font-display tracking-tight text-[#f7f6f2]">
-              Excellence Isn't Claimed — It’s Certified
+              {getContent('b2b.certifications', 'heading', "Excellence Isn't Claimed — It’s Certified")}
             </h2>
             <p className="text-xs sm:text-sm text-emerald-200/80">
-              Third-party accredited standards ensure 100% safety and regulatory compliance for every supply contract.
+              {getContent('b2b.certifications', 'description', 'Third-party accredited standards ensure 100% safety and regulatory compliance for every supply contract.')}
             </p>
           </div>
 
@@ -454,18 +454,18 @@ const B2BPage = () => {
       </section>
 
       {/* 6. PARTNER INQUIRY FORM & LOCATION HUBS */}
-      <section id="partner-inquiry" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <section id="partner-inquiry" data-section-key="b2b.hubs" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           
           {/* Left: Contact Info & Hub Addresses matching brochure */}
           <div className="lg:col-span-5 space-y-8">
             <div className="space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#2d472c]">Institutional Desk</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-[#2d472c]">{getContent('b2b.hubs', 'eyebrow', 'Institutional Desk')}</span>
               <h2 className="text-3xl sm:text-4xl font-bold text-[#2d472c] font-display tracking-tight">
-                NUVA B2B Partnerships
+                {getContent('b2b.hubs', 'heading', 'NUVA B2B Partnerships')}
               </h2>
               <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed">
-                Connect with our procurement leads to receive sample kits, scheduled morning delivery slots, and tier-1 bulk pricing.
+                {getContent('b2b.hubs', 'description', 'Connect with our procurement leads to receive sample kits, scheduled morning delivery slots, and tier-1 bulk pricing.')}
               </p>
             </div>
 
@@ -477,7 +477,7 @@ const B2BPage = () => {
                   <span>Head Office</span>
                 </div>
                 <p className="text-xs text-neutral-600 leading-relaxed">
-                  4th floor, Pancham Icon, Beside D Mart Mall, Vasna Road, Vadodara, Gujarat - 390007
+                  {getContent('b2b.hubs', 'headOffice', '4th floor, Pancham Icon, Beside D Mart Mall, Vasna Road, Vadodara, Gujarat - 390007')}
                 </p>
               </div>
 
@@ -487,7 +487,7 @@ const B2BPage = () => {
                   <span>Processing Unit</span>
                 </div>
                 <p className="text-xs text-neutral-600 leading-relaxed">
-                  Kaival Society, Anand, Gujarat - 388330
+                  {getContent('b2b.hubs', 'processingUnit', 'Kaival Society, Anand, Gujarat - 388330')}
                 </p>
               </div>
 
@@ -497,7 +497,7 @@ const B2BPage = () => {
                   <span>Retail Outlet</span>
                 </div>
                 <p className="text-xs text-neutral-600 leading-relaxed">
-                  Shop No.184 Radhakrishna Flat, Productivity Road, Nr. Akota Garden, Vadodara, Gujarat - 390020
+                  {getContent('b2b.hubs', 'retailOutlet', 'Shop No.184 Radhakrishna Flat, Productivity Road, Nr. Akota Garden, Vadodara, Gujarat - 390020')}
                 </p>
               </div>
             </div>
@@ -667,12 +667,12 @@ const B2BPage = () => {
       </section>
 
       {/* 7. Bottom Thank You Strip */}
-      <section className="bg-[#1c2f21] text-white py-12 px-4 sm:px-6 lg:px-8 text-center border-t border-emerald-950">
+      <section data-section-key="b2b.thankyou" className="bg-[#1c2f21] text-white py-12 px-4 sm:px-6 lg:px-8 text-center border-t border-emerald-950">
         <h2 className="text-3xl sm:text-5xl font-black font-display tracking-widest text-[#f5c76c] uppercase">
-          THANK YOU!
+          {getContent('b2b.thankyou', 'heading', 'THANK YOU!')}
         </h2>
         <p className="text-xs sm:text-sm text-neutral-300 mt-2">
-          Nuva Nutrition Pvt. Ltd. — Rethink Your Food.
+          {getContent('b2b.thankyou', 'subtitle', 'Nuva Nutrition Pvt. Ltd. — Rethink Your Food.')}
         </p>
       </section>
 

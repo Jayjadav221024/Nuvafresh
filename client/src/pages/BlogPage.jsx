@@ -161,8 +161,10 @@ const BlogPage = () => {
     : DEFAULT_TAGS;
 
   return (
-    <div className="bg-white font-sans text-neutral-900 pb-20">
-      
+    // One CMS section owns this whole page — its heading, tag cloud and all
+    // three article cards — so the marker sits on the page wrapper.
+    <div data-section-key="blog.hero" className="bg-white font-sans text-neutral-900 pb-20">
+
       {/* 1. Header Bar: Food & Health */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-4">
         <h1 className="text-3xl sm:text-4xl font-bold text-[#2d472c] font-display tracking-tight">

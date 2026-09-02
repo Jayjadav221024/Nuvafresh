@@ -141,21 +141,18 @@ const TrackOrderPage = () => {
         {/* ========================================================================= */}
         {/* 1. HERO SEARCH HEADER */}
         {/* ========================================================================= */}
-        <div className="bg-gradient-to-br from-[#1b341b] via-[#2d472c] to-[#152a14] rounded-3xl p-6 sm:p-10 text-white shadow-xl relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-lime-300/10 rounded-full blur-2xl pointer-events-none" />
-
+        <div className="bg-white rounded-3xl p-6 sm:p-10 text-neutral-900 shadow-sm border border-neutral-200/80 relative overflow-hidden">
           <div className="relative z-10 max-w-2xl space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-emerald-300 text-xs font-bold uppercase tracking-wider backdrop-blur-xs">
-              <Sparkles className="h-3.5 w-3.5" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#faf8f2] border border-[#eee9dc] text-neutral-600 text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
               <span>Live Farm-To-Doorstep Tracker</span>
             </div>
-            
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight font-display">
+
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight font-display text-neutral-900">
               Track Your Pure Harvest Order
             </h1>
-            
-            <p className="text-sm text-neutral-200 leading-relaxed">
+
+            <p className="text-sm text-neutral-600 leading-relaxed">
               Watch your order progress from chemical-free farm harvest through 4-stage aqueous Ozone (O₃) purification to doorstep dispatch.
             </p>
 
@@ -168,12 +165,12 @@ const TrackOrderPage = () => {
                   value={orderIdInput}
                   onChange={(e) => setOrderIdInput(e.target.value)}
                   placeholder="Enter Order ID (e.g. NUV-9081, NUV-8842)"
-                  className="w-full pl-11 pr-4 py-3 bg-white text-neutral-900 rounded-2xl text-xs sm:text-sm font-semibold placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-md"
+                  className="w-full pl-11 pr-4 py-3 bg-[#faf9f5] text-neutral-900 rounded-2xl text-xs sm:text-sm font-semibold placeholder-neutral-400 border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-300 focus:bg-white transition-colors"
                 />
               </div>
               <button
                 type="submit"
-                className="py-3 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 shrink-0"
+                className="py-3 px-6 rounded-2xl bg-neutral-900 hover:bg-neutral-800 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 shrink-0"
               >
                 <span>Track Live</span>
                 <ArrowRight className="h-4 w-4 stroke-[2.5]" />
@@ -181,19 +178,19 @@ const TrackOrderPage = () => {
             </form>
 
             {/* Quick Demo Order Links */}
-            <div className="flex flex-wrap items-center gap-2 pt-2 text-xs text-neutral-300">
-              <span className="font-semibold text-neutral-400">Quick Test Orders:</span>
+            <div className="flex flex-wrap items-center gap-2 pt-2 text-xs text-neutral-500">
+              <span className="font-semibold text-neutral-500">Quick Test Orders:</span>
               <button
                 type="button"
                 onClick={() => { setOrderIdInput('NUV-9081'); fetchOrder('NUV-9081'); }}
-                className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white font-mono text-[11px] transition-colors"
+                className="px-2.5 py-1 rounded-lg bg-[#faf8f2] hover:bg-neutral-100 border border-[#eee9dc] text-neutral-700 font-mono text-[11px] transition-colors"
               >
                 #NUV-9081 (Dispatched)
               </button>
               <button
                 type="button"
                 onClick={() => { setOrderIdInput('NUV-8842'); fetchOrder('NUV-8842'); }}
-                className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white font-mono text-[11px] transition-colors"
+                className="px-2.5 py-1 rounded-lg bg-[#faf8f2] hover:bg-neutral-100 border border-[#eee9dc] text-neutral-700 font-mono text-[11px] transition-colors"
               >
                 #NUV-8842 (Ozone Wash)
               </button>

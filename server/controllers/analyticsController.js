@@ -3,6 +3,7 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import ReportView from '../models/ReportView.js';
 import { resolveTimezone } from '../data/timezoneAtlas.js';
+import { resolveCity } from '../data/cityAtlas.js';
 
 /* ═══════════════════════════════════════════════════════════════════
    REFERRER CLASSIFICATION
@@ -84,9 +85,12 @@ export const trackSession = async (req, res) => {
       device: deviceOf(req.get('user-agent')),
       timezone: String(timezone).slice(0, 64),
       country: place?.country || '',
-      city: place?.city && place.city !== 'Unknown' ? place.city : '',
+      // A timezone names a country, never a city. The city stays empty until
+      // an order gives us a real one.
+      city: '',
       lat: place?.lat,
       lng: place?.lng,
+      precision: place?.precision || 'unknown',
       activity: 'Browsing',
       lastSeenAt: new Date()
     };
@@ -131,20 +135,39 @@ export const heartbeat = async (req, res) => {
 
     // A tab that started before the atlas knew its zone can still fill it in.
     const place = resolveTimezone(timezone);
-    if (place) {
-      patch.timezone = String(timezone).slice(0, 64);
-      patch.country = place.country;
-      patch.lat = place.lat;
-      patch.lng = place.lng;
-    }
+    const locationPatch = place
+      ? {
+          timezone: String(timezone).slice(0, 64),
+          country: place.country,
+          lat: place.lat,
+          lng: place.lng,
+          precision: place.precision
+        }
+      : null;
 
     try {
       await Session.updateOne({ sessionId }, { $set: patch });
+      if (locationPatch) {
+        // A session an order has already pinned to a real city must not be
+        // coarsened back to a country centroid by the next heartbeat.
+        await Session.updateOne(
+          { sessionId, precision: { $ne: 'address' } },
+          { $set: locationPatch }
+        );
+      }
       return res.json({ success: true });
     } catch (e) { /* database offline */ }
 
     const index = SESSIONS_STORE.findIndex((s) => s.sessionId === sessionId);
-    if (index !== -1) SESSIONS_STORE[index] = { ...SESSIONS_STORE[index], ...patch };
+    if (index !== -1) {
+      const current = SESSIONS_STORE[index];
+      const keepPrecise = current.precision === 'address';
+      SESSIONS_STORE[index] = {
+        ...current,
+        ...patch,
+        ...(locationPatch && !keepPrecise ? locationPatch : {})
+      };
+    }
     res.json({ success: true });
   } catch (e) {
     res.json({ success: false });
@@ -168,6 +191,18 @@ export const attachOrderToSession = async (sessionId, order) => {
     city: order.deliveryAddress?.city || '',
     region: order.deliveryAddress?.state || ''
   };
+
+  /* Move the pin to match the label. Without this the session reads
+     "Vadodara" while its coordinate is still the centre of India. The
+     canonical name comes back too, so "Baroda" and "Vadodara" are one
+     place on the map rather than two. */
+  const place = resolveCity(patch.city);
+  if (place) {
+    patch.city = place.city;
+    patch.lat = place.lat;
+    patch.lng = place.lng;
+    patch.precision = place.precision;
+  }
 
   try {
     const result = await Session.updateOne({ sessionId }, { $set: patch });
@@ -489,17 +524,26 @@ export const getLiveView = async (req, res) => {
       purchased: live.filter((s) => s.activity === 'Purchased').length
     };
 
-    /* ── Sessions by location: country · region · city ── */
+    /* ── Sessions by location ──
+       Grouped on what we actually know, so a session with only a country
+       reads "India" rather than "India · None · Unknown". Each row carries
+       the precision of its coordinate, and the best-placed session in a
+       group is the one that supplies the pin. */
+    const RANK = { address: 3, timezone: 2, region: 1, unknown: 0 };
     const byLocation = new Map();
+
     for (const s of sessions) {
-      const key = `${s.country || 'Unknown'} · ${s.region || 'None'} · ${s.city || 'Unknown'}`;
-      const entry = byLocation.get(key) || { label: key, value: 0, lat: s.lat, lng: s.lng };
+      const label = [s.country, s.region, s.city].filter(Boolean).join(' · ') || 'Unknown';
+      const precision = typeof s.lat === 'number' ? (s.precision || 'timezone') : 'unknown';
+      const entry = byLocation.get(label) || { label, value: 0, precision: 'unknown' };
+
       entry.value += 1;
-      if (entry.lat === undefined && s.lat !== undefined) {
+      if (RANK[precision] > RANK[entry.precision]) {
+        entry.precision = precision;
         entry.lat = s.lat;
         entry.lng = s.lng;
       }
-      byLocation.set(key, entry);
+      byLocation.set(label, entry);
     }
 
     /* ── Sessions per minute for the last hour ── */
@@ -541,6 +585,7 @@ export const getLiveView = async (req, res) => {
           country: s.country || '',
           lat: s.lat,
           lng: s.lng,
+          precision: s.precision || 'unknown',
           lastSeenAt: s.lastSeenAt
         }))
         .sort((a, b) => new Date(b.lastSeenAt) - new Date(a.lastSeenAt)),

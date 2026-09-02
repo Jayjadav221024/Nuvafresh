@@ -39,15 +39,15 @@ const ContactPage = () => {
     <div className="bg-white font-sans text-neutral-900 overflow-hidden pb-16">
       
       {/* 1. Questions? Send us an email Form Section matching screenshot */}
-      <section className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto">
+      <section data-section-key="contact.form" className="py-14 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto">
         <div className="text-center mb-10">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#2d472c] font-display tracking-tight">
-            Questions? Send us an email
+            {getContent('contact.form', 'heading', 'Questions? Send us an email')}
           </h1>
           {isSuccess && (
             <div className="mt-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm flex items-center justify-center gap-2 animate-fadeIn max-w-xl mx-auto">
               <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-              <span>Thank you! Your message has been sent successfully.</span>
+              <span>{getContent('contact.form', 'successMessage', 'Thank you! Your message has been sent successfully.')}</span>
             </div>
           )}
         </div>
@@ -114,15 +114,15 @@ const ContactPage = () => {
       </section>
 
       {/* 2. NuvaNutrition Pvt. Ltd Locations & Live Google Map Section matching screenshot */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <section data-section-key="contact.info" className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="rounded-3xl overflow-hidden border border-neutral-200/80 shadow-lg bg-[#f6f8f5] flex flex-col lg:flex-row items-stretch">
-          
+
           {/* Left Column: Location Cards */}
           <div className="w-full lg:w-2/5 p-6 sm:p-10 space-y-6 flex flex-col justify-center">
-            
+
             {/* Brand Title */}
             <h2 className="text-2xl sm:text-3xl font-bold text-[#2d472c] font-display tracking-tight mb-2">
-              NuvaNutrition Pvt. Ltd
+              {getContent('contact.info', 'companyName', 'NuvaNutrition Pvt. Ltd')}
             </h2>
 
             {/* Location Card 1: Processing Unit */}
@@ -200,14 +200,14 @@ const ContactPage = () => {
       </section>
 
       {/* 3. 4-Feature Icons Strip (Free Shipping | Big Saving | Online Support | Flexible Payment) matching screenshot */}
-      <section className="mt-8 py-10 px-4 sm:px-6 lg:px-8 bg-neutral-50/70 border-t border-neutral-200/80">
+      <section data-section-key="contact.features" className="mt-8 py-10 px-4 sm:px-6 lg:px-8 bg-neutral-50/70 border-t border-neutral-200/80">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 divide-y md:divide-y-0 md:divide-x divide-neutral-200">
           
           {/* Item 1: Free Shipping */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left pt-3 md:pt-0">
             <Truck className="h-7 w-7 text-neutral-800 stroke-[1.8]" />
             <span className="text-xs sm:text-sm font-bold text-neutral-900">
-              Free Shipping
+              {getContent('contact.features', 'feature1', 'Free Shipping')}
             </span>
           </div>
 
@@ -215,7 +215,7 @@ const ContactPage = () => {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left pt-3 md:pt-0">
             <Box className="h-7 w-7 text-neutral-800 stroke-[1.8]" />
             <span className="text-xs sm:text-sm font-bold text-neutral-900">
-              Big Saving
+              {getContent('contact.features', 'feature2', 'Big Saving')}
             </span>
           </div>
 
@@ -223,7 +223,7 @@ const ContactPage = () => {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left pt-3 md:pt-0">
             <MessageSquare className="h-7 w-7 text-neutral-800 stroke-[1.8]" />
             <span className="text-xs sm:text-sm font-bold text-neutral-900">
-              Online Support
+              {getContent('contact.features', 'feature3', 'Online Support')}
             </span>
           </div>
 
@@ -231,7 +231,7 @@ const ContactPage = () => {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left pt-3 md:pt-0">
             <Check className="h-7 w-7 text-neutral-800 stroke-[2.5]" />
             <span className="text-xs sm:text-sm font-bold text-neutral-900">
-              Flexible Payment
+              {getContent('contact.features', 'feature4', 'Flexible Payment')}
             </span>
           </div>
 

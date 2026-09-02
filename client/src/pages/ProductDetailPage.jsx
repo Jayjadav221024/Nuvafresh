@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
+import { useContent } from '../context/ContentContext';
 import API from '../api/axiosInstance';
 import PaymentModal from '../components/common/PaymentModal';
 import { ProductDetailPageSkeleton } from '../components/common/Skeleton';
@@ -73,9 +74,12 @@ const INITIAL_REVIEWS = [
 
 const ProductDetailPage = () => {
   const navigate = useNavigate();
+  // Undefined on the Admin Website Editor canvas, which renders this page
+  // outside the /products/:id route — see fetchProduct below.
   const { id } = useParams();
   const { addToCart } = useCart();
   const { user, openAuthModal } = useAuth();
+  const { getContent } = useContent();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
@@ -153,6 +157,15 @@ const ProductDetailPage = () => {
     const fetchProduct = async () => {
       try {
         setLoading(true);
+
+        // No id at all — the editor canvas. Show the first catalogue product so
+        // the layout has real content to lay out around.
+        if (!id) {
+          const { data } = await API.get('/products?limit=1');
+          if (data.success && data.products?.length > 0) setProduct(data.products[0]);
+          return;
+        }
+
         const { data } = await API.get(`/products/${id}`);
         if (data.success && data.product) {
           setProduct(data.product);
@@ -312,6 +325,30 @@ const ProductDetailPage = () => {
     : Math.round(variantPrice * 1.2);
   const variantDiscount = Math.round(((variantOriginalPrice - variantPrice) / variantOriginalPrice) * 100);
 
+  /* Copy for the pillar cards and the comparison table comes from the CMS, so
+     the Website Editor can rewrite every line without touching this file. */
+  const pillars = [
+    { Icon: Sparkles, title: 'Aqueous O₃ Washed', description: 'Neutralizes 99.9% of bacteria, mold spores, and pesticide residues without heat or wax.' },
+    { Icon: Truck, title: 'Direct From Soil', description: 'Harvested directly from certified Gujarat partner farms to your home in under 12 hours.' },
+    { Icon: ShieldCheck, title: 'HPLC Lab Tested', description: 'Zero synthetic pesticides or artificial ripening agents verified by gas chromatography.' },
+    { Icon: Heart, iconClass: 'text-rose-500', title: '₹1 To Agri-Tech', description: 'Every order funds sustainable equipment and living soil education for smallholder farmers.' }
+  ].map((pillar, idx) => ({
+    ...pillar,
+    title: getContent('pdp.pillars', `pillar${idx + 1}_title`, pillar.title),
+    description: getContent('pdp.pillars', `pillar${idx + 1}_desc`, pillar.description)
+  }));
+
+  const comparisonRows = [
+    { label: 'Cleaning Method', nuva: 'Triple Ozone (O₃) + RO Bubble Wash', market: 'Untreated tap water or chemical wax dip' },
+    { label: 'Pesticide Residue', nuva: '0.00 ppm (HPLC Certified Clean)', market: 'Common allowable pesticide residue levels' },
+    { label: 'Harvest to Doorstep', nuva: 'Under 12 Hours Direct', market: '3 to 7 days across middlemen & mandis' },
+    { label: 'Packaging', nuva: 'Zero-Plastic Breathable Bio-Film', market: 'Single-use plastic suffocation bags' }
+  ].map((row, idx) => ({
+    label: getContent('pdp.comparison', `row${idx + 1}_label`, row.label),
+    nuva: getContent('pdp.comparison', `row${idx + 1}_nuva`, row.nuva),
+    market: getContent('pdp.comparison', `row${idx + 1}_market`, row.market)
+  }));
+
   return (
     <div className="bg-white font-sans text-neutral-900 pb-20">
       
@@ -327,7 +364,7 @@ const ProductDetailPage = () => {
       </div>
 
       {/* 1. HERO PRODUCT SECTION (Exact Structure of Provided Reference Image) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+      <section data-section-key="pdp.hero" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
           
           {/* Left Column: Image Gallery with Big Preview & Bottom Horizontal Thumbnails */}
@@ -345,7 +382,7 @@ const ProductDetailPage = () => {
               {product.isOzoneWashed && (
                 <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 bg-[#2d472c] text-white text-xs font-bold px-3.5 py-1 rounded-full shadow-md">
                   <Sparkles className="h-3.5 w-3.5 text-emerald-300" />
-                  <span>O₃ Aqueous Washed</span>
+                  <span>{getContent('pdp.hero', 'ozoneBadge', 'O₃ Aqueous Washed')}</span>
                 </div>
               )}
             </div>
@@ -370,8 +407,12 @@ const ProductDetailPage = () => {
                 className="h-20 w-24 rounded-2xl border border-neutral-200 bg-[#f4f7f4] p-1.5 flex flex-col items-center justify-center text-center shrink-0 cursor-pointer hover:border-[#2d472c]"
               >
                 <ShieldCheck className="w-5 h-5 text-[#2d472c] mb-0.5" />
-                <span className="text-[9px] font-black text-[#2d472c] leading-tight">70+ Quality Checks</span>
-                <span className="text-[8px] text-neutral-500">0% Compromise</span>
+                <span className="text-[9px] font-black text-[#2d472c] leading-tight">
+                  {getContent('pdp.hero', 'qualityBadgeTitle', '70+ Quality Checks')}
+                </span>
+                <span className="text-[8px] text-neutral-500">
+                  {getContent('pdp.hero', 'qualityBadgeSubtitle', '0% Compromise')}
+                </span>
               </div>
             </div>
           </div>
@@ -393,7 +434,7 @@ const ProductDetailPage = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-bold text-neutral-800">
-                  Select Variant
+                  {getContent('pdp.hero', 'variantHeading', 'Select Variant')}
                 </span>
               </div>
 
@@ -452,22 +493,27 @@ const ProductDetailPage = () => {
             </div>
 
             {/* Unlock 17% OFF App Promo Banner Box */}
-            <div className="p-3.5 rounded-2xl bg-[#eef6f0] border border-emerald-300/80 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+            <div data-section-key="pdp.promo" className="p-3.5 rounded-2xl bg-[#eef6f0] border border-emerald-300/80 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-[#2d472c] text-white flex items-center justify-center shrink-0">
                   <Smartphone className="w-5 h-5" />
                 </div>
                 <div>
                   <span className="text-xs font-black text-[#2d472c] block">
-                    Unlock 17% OFF (15% + 2% extra on APP-only)
+                    {getContent('pdp.promo', 'headline', 'Unlock 17% OFF (15% + 2% extra on APP-only)')}
                   </span>
                   <span className="text-[11px] text-neutral-600">
-                    Use code: <strong className="text-emerald-900 font-mono">APP17</strong> or <strong className="text-emerald-900 font-mono">WELCOME10</strong>
+                    {getContent('pdp.promo', 'codeIntro', 'Use code:')}{' '}
+                    <strong className="text-emerald-900 font-mono">
+                      {getContent('pdp.promo', 'appCouponCode', 'APP17')}
+                    </strong> or <strong className="text-emerald-900 font-mono">
+                      {getContent('pdp.promo', 'couponCode', 'WELCOME10')}
+                    </strong>
                   </span>
                 </div>
               </div>
               <span className="px-3 py-1 rounded-full bg-emerald-700 text-white text-[10px] font-bold uppercase shrink-0">
-                ACTIVE
+                {getContent('pdp.promo', 'badgeLabel', 'ACTIVE')}
               </span>
             </div>
 
@@ -506,7 +552,7 @@ const ProductDetailPage = () => {
                 className="flex-1 py-3.5 px-4 rounded-2xl bg-[#1e4b3e] hover:bg-[#15382e] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
               >
                 <ShoppingBag className="h-4 w-4 shrink-0" />
-                <span>Add to cart</span>
+                <span>{getContent('pdp.hero', 'addToCartLabel', 'Add to cart')}</span>
               </button>
 
               {/* Buy Now Button (Bright Amber / Golden Accent Matching Reference) */}
@@ -521,21 +567,21 @@ const ProductDetailPage = () => {
                 }}
                 className="flex-1 py-3.5 px-4 rounded-2xl bg-[#e6ab09] hover:bg-[#d49d06] text-neutral-950 text-sm font-extrabold flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
               >
-                <span>Buy Now</span>
+                <span>{getContent('pdp.hero', 'buyNowLabel', 'Buy Now')}</span>
               </button>
             </div>
 
             {/* PRODUCT DESCRIPTION SECTION */}
             <div className="pt-6 border-t border-neutral-200 space-y-3">
               <h2 className="text-xs font-black uppercase tracking-wider text-neutral-900">
-                PRODUCT DESCRIPTION
+                {getContent('pdp.hero', 'descriptionHeading', 'PRODUCT DESCRIPTION')}
               </h2>
               <div className="text-xs sm:text-sm text-neutral-600 leading-relaxed space-y-3">
                 <p>
-                  {product.description || `This is the organic harvest your grandmother would trust. Our pure produce comes directly from verified smallholder partner farms in Gujarat, harvested at sunrise and never injected with artificial hormones or ripening chemicals.`}
+                  {product.description || getContent('pdp.hero', 'descriptionFallback', 'This is the organic harvest your grandmother would trust. Our pure produce comes directly from verified smallholder partner farms in Gujarat, harvested at sunrise and never injected with artificial hormones or ripening chemicals.')}
                 </p>
                 <p>
-                  Every batch is lab-tested through multi-stage gas chromatography, and every dispatch carries our medical-grade aqueous ozone purification guarantee. 0.00 PPM chemical residue, 100% peace of mind.
+                  {getContent('pdp.hero', 'descriptionNote', 'Every batch is lab-tested through multi-stage gas chromatography, and every dispatch carries our medical-grade aqueous ozone purification guarantee. 0.00 PPM chemical residue, 100% peace of mind.')}
                 </p>
               </div>
             </div>
@@ -546,63 +592,33 @@ const ProductDetailPage = () => {
       </section>
 
       {/* 2. VALUE PILLARS (4 Icons Grid) */}
-      <section className="bg-[#fbfaf6] py-14 px-4 sm:px-6 lg:px-8 border-y border-neutral-200/80">
+      <section data-section-key="pdp.pillars" className="bg-[#fbfaf6] py-14 px-4 sm:px-6 lg:px-8 border-y border-neutral-200/80">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-[#2d472c] font-display">
-              The Nuva Purity Difference
+              {getContent('pdp.pillars', 'heading', 'The Nuva Purity Difference')}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-6 rounded-2xl bg-white border border-neutral-200/80 shadow-sm space-y-2 text-center">
-              <div className="h-12 w-12 rounded-full bg-[#eaf4ec] text-[#2d472c] flex items-center justify-center mx-auto mb-3">
-                <Sparkles className="h-6 w-6" />
+            {pillars.map((pillar, idx) => (
+              <div key={idx} className="p-6 rounded-2xl bg-white border border-neutral-200/80 shadow-sm space-y-2 text-center">
+                <div className="h-12 w-12 rounded-full bg-[#eaf4ec] text-[#2d472c] flex items-center justify-center mx-auto mb-3">
+                  <pillar.Icon className={`h-6 w-6 ${pillar.iconClass || ''}`} />
+                </div>
+                <h3 className="text-sm font-bold text-neutral-900">{pillar.title}</h3>
+                <p className="text-xs text-neutral-600 leading-relaxed">{pillar.description}</p>
               </div>
-              <h3 className="text-sm font-bold text-neutral-900">Aqueous O₃ Washed</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed">
-                Neutralizes 99.9% of bacteria, mold spores, and pesticide residues without heat or wax.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-white border border-neutral-200/80 shadow-sm space-y-2 text-center">
-              <div className="h-12 w-12 rounded-full bg-[#eaf4ec] text-[#2d472c] flex items-center justify-center mx-auto mb-3">
-                <Truck className="h-6 w-6" />
-              </div>
-              <h3 className="text-sm font-bold text-neutral-900">Direct From Soil</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed">
-                Harvested directly from certified Gujarat partner farms to your home in under 12 hours.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-white border border-neutral-200/80 shadow-sm space-y-2 text-center">
-              <div className="h-12 w-12 rounded-full bg-[#eaf4ec] text-[#2d472c] flex items-center justify-center mx-auto mb-3">
-                <ShieldCheck className="h-6 w-6" />
-              </div>
-              <h3 className="text-sm font-bold text-neutral-900">HPLC Lab Tested</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed">
-                Zero synthetic pesticides or artificial ripening agents verified by gas chromatography.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-white border border-neutral-200/80 shadow-sm space-y-2 text-center">
-              <div className="h-12 w-12 rounded-full bg-[#eaf4ec] text-[#2d472c] flex items-center justify-center mx-auto mb-3">
-                <Heart className="h-6 w-6 text-rose-500" />
-              </div>
-              <h3 className="text-sm font-bold text-neutral-900">₹1 To Agri-Tech</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed">
-                Every order funds sustainable equipment and living soil education for smallholder farmers.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* 3. SIDE-BY-SIDE COMPARISON TABLE */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+      <section data-section-key="pdp.comparison" className="py-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
         <div className="text-center mb-10">
           <h2 className="text-2xl sm:text-3xl font-bold text-[#2d472c] font-display">
-            How Nuva Compares to Market Produce
+            {getContent('pdp.comparison', 'heading', 'How Nuva Compares to Market Produce')}
           </h2>
         </div>
 
@@ -610,43 +626,30 @@ const ProductDetailPage = () => {
           <table className="w-full text-left text-xs sm:text-sm border-collapse">
             <thead>
               <tr className="bg-[#2d472c] text-white">
-                <th className="p-4 sm:p-5 font-bold">Purity Standard</th>
-                <th className="p-4 sm:p-5 font-bold bg-[#233822]">Nuva Certified Harvest</th>
-                <th className="p-4 sm:p-5 font-bold text-neutral-300">Standard Market Produce</th>
+                <th className="p-4 sm:p-5 font-bold">{getContent('pdp.comparison', 'col1', 'Purity Standard')}</th>
+                <th className="p-4 sm:p-5 font-bold bg-[#233822]">{getContent('pdp.comparison', 'col2', 'Nuva Certified Harvest')}</th>
+                <th className="p-4 sm:p-5 font-bold text-neutral-300">{getContent('pdp.comparison', 'col3', 'Standard Market Produce')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-200 bg-white">
-              <tr>
-                <td className="p-4 font-semibold text-neutral-800">Cleaning Method</td>
-                <td className="p-4 bg-emerald-50/70 font-bold text-[#2d472c]">Triple Ozone (O₃) + RO Bubble Wash</td>
-                <td className="p-4 text-neutral-600">Untreated tap water or chemical wax dip</td>
-              </tr>
-              <tr>
-                <td className="p-4 font-semibold text-neutral-800">Pesticide Residue</td>
-                <td className="p-4 bg-emerald-50/70 font-bold text-[#2d472c]">0.00 ppm (HPLC Certified Clean)</td>
-                <td className="p-4 text-neutral-600">Common allowable pesticide residue levels</td>
-              </tr>
-              <tr>
-                <td className="p-4 font-semibold text-neutral-800">Harvest to Doorstep</td>
-                <td className="p-4 bg-emerald-50/70 font-bold text-[#2d472c]">Under 12 Hours Direct</td>
-                <td className="p-4 text-neutral-600">3 to 7 days across middlemen & mandis</td>
-              </tr>
-              <tr>
-                <td className="p-4 font-semibold text-neutral-800">Packaging</td>
-                <td className="p-4 bg-emerald-50/70 font-bold text-[#2d472c]">Zero-Plastic Breathable Bio-Film</td>
-                <td className="p-4 text-neutral-600">Single-use plastic suffocation bags</td>
-              </tr>
+              {comparisonRows.map((row, idx) => (
+                <tr key={idx}>
+                  <td className="p-4 font-semibold text-neutral-800">{row.label}</td>
+                  <td className="p-4 bg-emerald-50/70 font-bold text-[#2d472c]">{row.nuva}</td>
+                  <td className="p-4 text-neutral-600">{row.market}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </section>
 
       {/* 4. FAQ ACCORDION */}
-      <section className="bg-[#fbfaf6] py-16 px-4 sm:px-6 lg:px-8 border-y border-neutral-200/80">
+      <section data-section-key="pdp.faq" className="bg-[#fbfaf6] py-16 px-4 sm:px-6 lg:px-8 border-y border-neutral-200/80">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-[#2d472c] font-display">
-              Frequently Asked Questions
+              {getContent('pdp.faq', 'heading', 'Frequently Asked Questions')}
             </h2>
           </div>
           <div className="space-y-4">
@@ -677,25 +680,29 @@ const ProductDetailPage = () => {
       </section>
 
       {/* 5. INTERACTIVE REVIEWS & UGC GALLERY */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+      <section data-section-key="pdp.reviews" className="py-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 p-8 rounded-3xl bg-[#f6f8f5] border border-neutral-200/80">
           <div className="flex items-center gap-6">
             <div className="text-center">
-              <span className="text-5xl font-black text-[#2d472c] font-display">4.9</span>
+              <span className="text-5xl font-black text-[#2d472c] font-display">
+                {getContent('pdp.reviews', 'ratingScore', '4.9')}
+              </span>
               <div className="flex text-amber-500 justify-center mt-1">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star key={i} className="h-4 w-4 fill-current" />
                 ))}
               </div>
-              <p className="text-xs text-neutral-500 mt-1">1,248 Verified Ratings</p>
+              <p className="text-xs text-neutral-500 mt-1">
+                {getContent('pdp.reviews', 'ratingCount', '1,248 Verified Ratings')}
+              </p>
             </div>
 
             <div className="h-16 w-px bg-neutral-300 hidden sm:block" />
 
             <div className="space-y-1 text-xs text-neutral-600 hidden sm:block">
-              <p>🌱 99% Verified Customer Satisfaction</p>
-              <p>✨ 100% Pesticide-Free Guarantee</p>
-              <p>🚚 12-Hour Cold Dispatch</p>
+              <p>{getContent('pdp.reviews', 'highlight1', '🌱 99% Verified Customer Satisfaction')}</p>
+              <p>{getContent('pdp.reviews', 'highlight2', '✨ 100% Pesticide-Free Guarantee')}</p>
+              <p>{getContent('pdp.reviews', 'highlight3', '🚚 12-Hour Cold Dispatch')}</p>
             </div>
           </div>
 
@@ -703,7 +710,9 @@ const ProductDetailPage = () => {
             onClick={() => setShowReviewForm(!showReviewForm)}
             className="px-6 py-3 rounded-full bg-[#2d472c] hover:bg-[#20341f] text-white text-xs font-bold shadow-md transition-transform active:scale-95 cursor-pointer"
           >
-            {showReviewForm ? 'Close Review Form' : 'Write a Verified Review'}
+            {showReviewForm
+              ? getContent('pdp.reviews', 'ctaCloseLabel', 'Close Review Form')
+              : getContent('pdp.reviews', 'ctaLabel', 'Write a Verified Review')}
           </button>
         </div>
 

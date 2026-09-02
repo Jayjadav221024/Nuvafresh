@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { protect, requireAdmin } from '../middlewares/authMiddleware.js';
 import Product from '../models/Product.js';
 import Order from '../models/Order.js';
@@ -12,12 +13,27 @@ import SectionContent from '../models/SectionContent.js';
 import AuditLog from '../models/AuditLog.js';
 import User from '../models/User.js';
 import FAQ from '../models/FAQ.js';
+import Role from '../models/Role.js';
 import Testimonial from '../models/Testimonial.js';
 import Media from '../models/Media.js';
 import { CUSTOMERS_STORE, ORDERS_STORE } from '../utils/store.js';
 import { getIncomingByProduct } from '../controllers/transferController.js';
 
 const router = express.Router();
+
+/* Every ":id" on this router addresses a Mongo document. The admin screens fall
+   back to seeded rows (role-1, faq-2, t-3 …) whenever the API is unreachable at
+   load time, and editing or deleting one of those rows used to reach Mongoose
+   as a malformed id and come back as a raw CastError 500. Reject it here so the
+   screen shows a clean "not found" instead.
+   /customers/:customerId is deliberately named differently: those ids may come
+   from the in-memory demo store rather than the database. */
+router.param('id', (req, res, next, id) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(404).json({ success: false, message: 'Record not found' });
+  }
+  next();
+});
 
 // Fallback seed FAQs if MongoDB collection is empty
 const DEFAULT_FAQS = [
@@ -1004,9 +1020,11 @@ router.get('/customers', async (req, res) => {
 });
 
 /* One customer, with the orders that produced their totals. */
-router.get('/customers/:id', async (req, res) => {
+// Not ":id" — a customer may live in the in-memory store under a non-Mongo id,
+// so this route opts out of the ObjectId guard at the top of the router.
+router.get('/customers/:customerId', async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.customerId;
 
     let base = CUSTOMERS_STORE.find((c) => String(c._id) === id);
     if (!base) {
@@ -1089,6 +1107,88 @@ router.delete('/faqs/:id', async (req, res) => {
   try {
     await FAQ.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'FAQ removed' });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// 11. Staff Roles (RBAC) CRUD Operations
+// Seeded the first time the screen is opened, so an empty collection still
+// shows the four roles the business actually runs on.
+const DEFAULT_ROLES = [
+  {
+    name: 'Super Administrator',
+    usersCount: 2,
+    desc: 'Full unrestricted access across all 18 screens and database controls.',
+    screens: ['All Modules', 'Website Editor', 'Financial Analytics', 'Orders & Refunds', 'Audit Logs'],
+    order: 1
+  },
+  {
+    name: 'Operations & Dispatch Lead',
+    usersCount: 4,
+    desc: 'Manages live packaging, O3 batch logs, orders, and inventory thresholds.',
+    screens: ['Orders', 'Inventory', 'Products', 'Inquiries'],
+    order: 2
+  },
+  {
+    name: 'Marketing & Content Editor',
+    usersCount: 3,
+    desc: 'Visual Website Editor, Blogs, Coupons, Newsletter and Customer Reviews.',
+    screens: ['Website Editor', 'Coupons', 'Reviews', 'Newsletter', 'Blogs'],
+    order: 3
+  },
+  {
+    name: 'Customer Support Representative',
+    usersCount: 2,
+    desc: 'View customer inquiries, respond to tickets, and track order states.',
+    screens: ['Inquiries', 'Orders (View Only)', 'Reviews (View Only)'],
+    order: 4
+  }
+];
+
+router.get('/roles', async (req, res) => {
+  try {
+    let roles = [];
+    try {
+      roles = await Role.find().sort({ order: 1, createdAt: 1 });
+    } catch (e) {}
+
+    if (roles.length === 0) {
+      try {
+        roles = await Role.insertMany(DEFAULT_ROLES);
+      } catch (e) {
+        roles = DEFAULT_ROLES.map((r, i) => ({ _id: `role-${i + 1}`, ...r }));
+      }
+    }
+
+    res.json({ success: true, count: roles.length, roles });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+router.post('/roles', async (req, res) => {
+  try {
+    const role = await Role.create(req.body);
+    res.status(201).json({ success: true, role });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+router.put('/roles/:id', async (req, res) => {
+  try {
+    const updated = await Role.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json({ success: true, role: updated });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+router.delete('/roles/:id', async (req, res) => {
+  try {
+    await Role.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Role removed' });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

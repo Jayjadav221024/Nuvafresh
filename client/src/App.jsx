@@ -19,7 +19,7 @@ import OrderSuccessPage from './pages/OrderSuccessPage';
 import TrackOrderPage from './pages/TrackOrderPage';
 import MetaobjectEntryPage from './pages/MetaobjectEntryPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
-import LoadingSpinner from './components/common/LoadingSpinner';
+import AdminSkeleton from './components/common/AdminSkeleton';
 import { FullWebsiteSkeleton } from './components/common/Skeleton';
 
 // Dynamic Code Splitting for Admin Module (<150KB user bundle)
@@ -100,7 +100,7 @@ const App = () => {
         path="/admin"
         element={
           <ProtectedRoute adminOnly>
-            <Suspense fallback={<LoadingSpinner fullScreen />}>
+            <Suspense fallback={<AdminSkeleton />}>
               <AdminLayout />
             </Suspense>
           </ProtectedRoute>
