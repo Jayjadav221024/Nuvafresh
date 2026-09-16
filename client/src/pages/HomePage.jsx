@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HeroBanner from '../components/home/HeroBanner';
+import SuperSavingsSection from '../components/home/SuperSavingsSection';
 import WherePurityGrowsSection from '../components/home/WherePurityGrowsSection';
 import FarmersWayOfLifeSection from '../components/home/FarmersWayOfLifeSection';
 import RegenerativeFarmingSection from '../components/home/RegenerativeFarmingSection';
@@ -60,6 +61,16 @@ const HomePage = () => {
   const [bestsellers, setBestsellers] = useState(EXACT_BESTSELLERS);
   const { getContent } = useContent();
 
+  // These still read from the hero's content section: the heading moved out of
+  // HeroBanner to sit with its grid, but the CMS fields behind it are unchanged
+  const badgeTag = getContent('home.hero', 'badgeTag', 'HANDPICKED & MOST LOVED');
+  const bestsellersHeadline = getContent('home.hero', 'headlineLine1', 'Nuva Bestsellers');
+  const bestsellersSubtitle = getContent(
+    'home.hero',
+    'subtitleParagraph',
+    '100% Certified Chemical-Free staples directly harvested from our verified chemical-free partner farms.'
+  );
+
   useEffect(() => {
     const fetchBestsellers = async () => {
       try {
@@ -86,8 +97,31 @@ const HomePage = () => {
       {/* 1. Header Category Icons & "Nuva Bestsellers" Heading */}
       <HeroBanner />
 
-      {/* 2. Nuva Bestsellers 4-Card Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
+      {/* 1.1 Super Savings - sits directly under Browse By Category, and opens
+          with the service promises bar that used to close out the hero */}
+      <SuperSavingsSection />
+
+      {/* 2. Nuva Bestsellers heading & 4-Card Grid */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 text-center">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#f4f7f2] border border-[#d8e3d5] text-[#2d472c] text-xs font-bold uppercase tracking-widest mb-3 shadow-xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+            <span>{badgeTag}</span>
+          </div>
+
+          <div className="flex items-center justify-center gap-4">
+            <div className="hidden sm:block h-px w-16 bg-gradient-to-r from-transparent to-[#2d472c]/30" />
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#2d472c] font-display tracking-tight">
+              {bestsellersHeadline}
+            </h2>
+            <div className="hidden sm:block h-px w-16 bg-gradient-to-l from-transparent to-[#2d472c]/30" />
+          </div>
+
+          <p className="mt-2.5 text-sm sm:text-base text-neutral-600 max-w-xl mx-auto font-sans leading-relaxed">
+            {bestsellersSubtitle}
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 items-stretch">
           {bestsellers.map((product) => (
             <ProductCard key={product._id} product={product} />

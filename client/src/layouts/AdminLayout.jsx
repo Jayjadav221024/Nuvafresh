@@ -4,7 +4,7 @@ import {
   Home, ShoppingBag, Package, Tag, Users, Sun, Moon, LogOut, Menu, X,
   KeyRound, FileText, ShieldCheck, Search, ExternalLink, ChevronRight,
   ChevronDown, Activity, Bell, Settings, Globe, Layers, CornerDownRight,
-  MailCheck
+  MailCheck, Zap, SlidersHorizontal, ShieldAlert, Webhook, FileClock
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -31,6 +31,21 @@ const NAV_STRUCTURE = [
       { label: 'All orders', path: '/admin/orders', keywords: ['orders', 'sales', 'fulfillment', 'shipping'] },
       { label: 'Drafts', path: '/admin/orders?view=drafts', keywords: ['drafts', 'pending', 'quotes'] },
       { label: 'Abandoned checkouts', path: '/admin/orders?view=abandoned', keywords: ['abandoned', 'cart', 'recovery'] }
+    ]
+  },
+  {
+    type: 'group',
+    label: 'GoKwik',
+    icon: Zap,
+    children: [
+      { label: 'Overview', path: '/admin/gokwik', keywords: ['gokwik', 'checkout', 'payments', 'gateway', 'dashboard'] },
+      { label: 'Settings', path: '/admin/gokwik/settings', keywords: ['gokwik settings', 'api key', 'merchant id', 'credentials'] },
+      { label: 'COD Rules', path: '/admin/gokwik/cod', keywords: ['cod', 'cash on delivery', 'otp', 'verification'] },
+      { label: 'RTO & Risk', path: '/admin/gokwik/rto', keywords: ['rto', 'risk', 'fraud', 'kwikpass'] },
+      { label: 'Orders', path: '/admin/gokwik/orders', keywords: ['gokwik orders', 'kwik orders', 'transactions'] },
+      { label: 'Analytics', path: '/admin/gokwik/analytics', keywords: ['gokwik analytics', 'conversion', 'success rate'] },
+      { label: 'Webhooks', path: '/admin/gokwik/webhooks', keywords: ['webhooks', 'events', 'gokwik callback'] },
+      { label: 'Activity Logs', path: '/admin/gokwik/logs', keywords: ['logs', 'audit', 'gokwik events'] }
     ]
   },
   {

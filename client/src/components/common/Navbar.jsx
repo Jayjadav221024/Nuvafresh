@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { 
   Search, User as UserIcon, ShoppingBag, ChevronDown, ChevronUp, ChevronRight, Shield, LogOut,
-  Sparkles, Tag, ShieldCheck, Truck, Percent, Menu, X, Phone
+  Sparkles, Tag, ShieldCheck, Truck, Percent, Menu, X, Phone, Heart
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useCart } from '../../hooks/useCart';
@@ -85,6 +85,19 @@ const Navbar = () => {
   const [mobileAboutOpen, setMobileAboutOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
 
+  /* At the very top of the page the nav row is left transparent so whatever the
+     page opens with - the home hero's background arc, for one - runs straight up
+     behind it and the two read as one surface. As soon as anything scrolls under
+     it, it takes its white back so the links stay legible. */
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const announcementItems = [
     { icon: Percent, text: marqueeText, highlight: 'ACTIVE' },
     { icon: ShieldCheck, text: 'Certified 4-Stage Ozone (O₃) Washed Produce', highlight: 'Chemical-Free' },
@@ -92,7 +105,7 @@ const Navbar = () => {
   ];
 
   return (
-    <header data-section-key="sitewide.header" className="sticky top-0 z-50 bg-white font-sans border-b border-neutral-200 cursor-pointer">
+    <header data-section-key="sitewide.header" className="sticky top-0 z-50 font-sans cursor-pointer">
       
       {/* 1. Top Announcement Smooth Marquee Bar with Icons & Zero Emojis */}
       <div data-section-key="sitewide.announcement" className="bg-[#2d472c] text-white py-2 px-4 text-[11px] font-medium overflow-hidden border-b border-[#233822] select-none">
@@ -129,26 +142,53 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* 2. Main Navigation Bar matching exact 3-part layout: Left Logo | Center Nav Items | Right Action Icons */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
-        
+      {/* 2. Main Navigation Bar matching exact 3-part layout: Left Logo | Center Nav Items | Right Action Controls */}
+      <div
+        className={`transition-colors duration-300 ${
+          scrolled ? 'bg-white shadow-[0_1px_0_rgba(0,0,0,0.06)]' : 'bg-transparent'
+        }`}
+      >
+      {/* Same max-w-7xl and padding as the hero's inner container, so the logo
+          lands on the home section's left content edge and the action controls
+          on its right one - the two rows line up down the page.
+
+          Everything stays in flow. Pinning the links to 50% centres them on the
+          wheel rim's axis, but the right-hand group is far wider when signed in
+          (search + icons + account + Admin), so it reached back past the middle
+          and the two overlapped. In-flow layout cannot overlap. */}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 sm:h-24 lg:h-28 flex items-center justify-between gap-4 lg:gap-8">
+
         {/* Left: Brand Official Logo (Nuva NUTRITION) */}
-        <Link to="/" className="flex items-center gap-2 group shrink-0 py-1">
-          <img 
-            src={customLogoImage || NUVA_LOGO_BASE64} 
-            alt="Nuva Nutrition" 
-            className="h-10 sm:h-14 md:h-16 lg:h-[68px] w-auto object-contain transition-transform duration-200 group-hover:scale-105"
-          />
+        {/* Nudged out past the container's gutter. Up to lg the pull stays
+            within that gutter, so the logo never reaches the viewport edge.
+            The bigger 2xl pull only applies from 1536px up, where max-w-7xl
+            leaves at least 128px of outer margin to move into - at xl the
+            container can be flush to the viewport, and the logo would clip. */}
+        <Link to="/" className="flex flex-col group shrink-0 py-1 -ml-3 sm:-ml-5 lg:-ml-7 2xl:-ml-16">
+          {customLogoImage || NUVA_LOGO_BASE64 ? (
+            <img 
+              src={customLogoImage || NUVA_LOGO_BASE64} 
+              alt="Nuva Nutrition" 
+              className="h-10 sm:h-12 md:h-14 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex flex-col leading-none">
+              <span className="text-2xl sm:text-3xl font-serif font-bold text-[#2d472c] tracking-tight">Nuva</span>
+              <span className="text-[9px] sm:text-[10px] font-sans uppercase font-bold tracking-[0.25em] text-[#557153]">NUTRITION</span>
+            </div>
+          )}
         </Link>
 
-        {/* Center: Main Nav Links (Home, About ⌄, Blog, Products ⌄, Contact us) */}
-        <nav className="hidden md:flex items-center gap-7 lg:gap-9 text-[14px] font-medium text-[#2d472c]">
+        {/* Center: Main Nav Links (Home, About, Blog, Contact Us) */}
+        <nav className="hidden md:flex items-center shrink-0 gap-7 lg:gap-10 text-[15px] font-medium text-[#2d472c]">
           
-          {/* Home */}
+          {/* Home with active underline */}
           <NavLink 
             to="/" 
             className={({ isActive }) => 
-              isActive ? 'text-[#82977f] font-semibold' : 'text-neutral-700 hover:text-[#2d472c] transition-colors'
+              isActive 
+                ? 'text-[#2d472c] font-semibold border-b-2 border-[#2d472c] pb-0.5 transition-all' 
+                : 'text-neutral-700 hover:text-[#2d472c] transition-colors'
             }
           >
             {navHome}
@@ -160,14 +200,14 @@ const Navbar = () => {
             onMouseEnter={() => setAboutOpen(true)}
             onMouseLeave={() => setAboutOpen(false)}
           >
-            <button 
+            <Link 
+              to="/our-story"
               className={`flex items-center gap-1 py-2 transition-colors ${
                 aboutOpen ? 'text-[#2d472c] font-semibold' : 'text-neutral-700 hover:text-[#2d472c]'
               }`}
             >
               <span>{navAbout}</span>
-              <ChevronDown className="h-3.5 w-3.5 stroke-[2.2] text-neutral-600" />
-            </button>
+            </Link>
 
             {aboutOpen && (
               <div className="absolute top-full left-0 w-52 bg-white border border-neutral-200/90 shadow-xl py-2 rounded-md z-50 animate-fadeIn">
@@ -192,169 +232,51 @@ const Navbar = () => {
             {navBlog}
           </Link>
 
-          {/* Products Multi-Tier Dropdown */}
-          <div 
-            className="relative"
-            onMouseEnter={() => setProductsOpen(true)}
-            onMouseLeave={() => {
-              setProductsOpen(false);
-              setActiveCategory(null);
-            }}
-          >
-            <button 
-              className={`flex items-center gap-1 py-2 transition-colors ${
-                productsOpen ? 'text-[#2d472c] font-semibold' : 'text-neutral-700 hover:text-[#2d472c]'
-              }`}
-            >
-              <span>{navProducts}</span>
-              {productsOpen ? (
-                <ChevronUp className="h-3.5 w-3.5 stroke-[2.2] text-[#2d472c]" />
-              ) : (
-                <ChevronDown className="h-3.5 w-3.5 stroke-[2.2] text-neutral-600" />
-              )}
-            </button>
-
-            {/* Flyout Dropdown Menu */}
-            {productsOpen && (
-              <div className="absolute top-full left-0 flex items-start z-50 animate-fadeIn">
-                
-                {/* Level 1 Categories */}
-                <div className="w-56 bg-white border border-neutral-200/90 shadow-xl py-3 divide-y divide-transparent">
-                  {categoriesMenu.map((cat) => {
-                    const isActive = activeCategory === cat.id;
-                    return (
-                      <div
-                        key={cat.id}
-                        onMouseEnter={() => {
-                          if (cat.hasSubmenu) {
-                            setActiveCategory(cat.id);
-                          } else {
-                            setActiveCategory(null);
-                          }
-                        }}
-                        className={`group relative flex items-center justify-between px-4 py-2.5 text-xs sm:text-[13px] cursor-pointer transition-colors ${
-                          isActive 
-                            ? 'text-[#2d472c] font-bold bg-neutral-50/70 border-b border-[#2d472c]/40' 
-                            : 'text-neutral-700 hover:text-[#2d472c] hover:bg-neutral-50'
-                        }`}
-                      >
-                        {cat.hasSubmenu ? (
-                          <span className={`w-full flex items-center justify-between ${isActive ? 'underline underline-offset-4 decoration-[#2d472c]' : ''}`}>
-                            <span>{cat.name}</span>
-                            <ChevronRight className="h-3.5 w-3.5 stroke-[2] text-neutral-500 group-hover:text-[#2d472c]" />
-                          </span>
-                        ) : (
-                          <Link 
-                            to={cat.path} 
-                            className="w-full block"
-                            onClick={() => setProductsOpen(false)}
-                          >
-                            {cat.name}
-                          </Link>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Level 2 Sub-Categories Flyout */}
-                {activeCategory && (
-                  <div className="w-48 bg-white border border-neutral-200/90 border-l-0 shadow-xl py-3 pl-6 pr-4 space-y-3 min-h-[140px] animate-fadeIn">
-                    {categoriesMenu.find((c) => c.id === activeCategory)?.subcategories?.map((sub) => (
-                      <Link
-                        key={sub.name}
-                        to={sub.path}
-                        onClick={() => {
-                          setProductsOpen(false);
-                          setActiveCategory(null);
-                        }}
-                        className="block text-xs sm:text-[13px] font-semibold text-[#1e40af] hover:text-[#1d4ed8] hover:translate-x-1 transition-all"
-                      >
-                        {sub.name}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-
-              </div>
-            )}
-          </div>
-
-          {/* B2B / Partnerships */}
-          <NavLink 
-            to="/b2b" 
-            className={({ isActive }) => 
-              isActive ? 'text-[#82977f] font-semibold' : 'text-neutral-700 hover:text-[#2d472c] transition-colors'
-            }
-          >
-            B2B / Wholesale
-          </NavLink>
-
-          {/* Track Order */}
-          <NavLink 
-            to="/track-order" 
-            className={({ isActive }) => 
-              isActive ? 'text-[#2d472c] font-bold' : 'text-neutral-700 hover:text-[#2d472c] transition-colors'
-            }
-          >
-            Track Order
-          </NavLink>
-
-          {/* Contact us */}
+          {/* Contact Us */}
           <Link 
             to="/contact-us" 
             className="text-neutral-700 hover:text-[#2d472c] transition-colors"
           >
             {navContact}
           </Link>
+
         </nav>
 
-        {/* Right: Action Icons (Search, User, Cart, Hamburger) */}
-        <div className="flex items-center gap-2 sm:gap-5 text-neutral-800">
+        {/* Right: Search Box, Wishlist, Cart & Profile */}
+        {/* Mirrors the logo's pull on the other side, so the search and icons
+            sit as close to the right edge as the logo does to the left. */}
+        <div className="flex items-center shrink-0 gap-3 sm:gap-5 text-neutral-800">
           
-          {/* Admin badge if logged in as Admin */}
-          {user?.role === 'admin' && (
-            <Link
-              to="/admin"
-              className="hidden sm:flex items-center gap-1 px-3 py-1 rounded-md bg-[#2d472c] text-white text-xs font-bold hover:bg-[#20341f] transition-colors shadow-sm"
+          {/* Embedded Pill Search Bar */}
+          <div className="hidden lg:flex items-center">
+            <Link 
+              to="/shop"
+              className="flex items-center justify-between border border-neutral-400/70 rounded-md px-3.5 py-1.5 w-60 xl:w-72 bg-white text-xs text-neutral-500 hover:border-[#2d472c] transition-colors shadow-2xs"
             >
-              <Shield className="h-3.5 w-3.5" />
-              <span>Admin</span>
+              <span className="truncate">What are you looking for?</span>
+              <Search className="h-4 w-4 text-neutral-600 shrink-0 ml-2" />
             </Link>
-          )}
+          </div>
 
-          {/* Search Trigger */}
+          {/* Mobile Search Icon Trigger */}
           <Link
             to="/shop"
             title="Search catalog"
-            className="p-1 sm:p-1.5 text-neutral-800 hover:text-[#2d472c] transition-colors"
+            className="lg:hidden p-1.5 text-neutral-800 hover:text-[#2d472c] transition-colors"
           >
-            <Search className="h-4 sm:h-5 w-4 sm:w-5 stroke-[1.8]" />
+            <Search className="h-5 w-5 stroke-[1.8]" />
           </Link>
 
-          {/* User Profile */}
-          {user ? (
-            <div className="flex items-center gap-1">
-              <span className="text-xs font-bold text-[#2d472c] hidden sm:inline">{user.name.split(' ')[0]}</span>
-              <button
-                onClick={logout}
-                title="Logout"
-                className="p-1 sm:p-1.5 text-neutral-800 hover:text-error transition-colors"
-              >
-                <LogOut className="h-4 sm:h-5 w-4 sm:w-5 stroke-[1.8]" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => openAuthModal('login')}
-              title="Sign in / Account"
-              className="p-1 sm:p-1.5 text-neutral-800 hover:text-[#2d472c] transition-colors"
-            >
-              <UserIcon className="h-4 sm:h-5 w-4 sm:w-5 stroke-[1.8]" />
-            </button>
-          )}
+          {/* Wishlist Heart Icon */}
+          <Link
+            to="/shop"
+            title="Wishlist"
+            className="p-1.5 text-neutral-700 hover:text-[#2d472c] transition-colors"
+          >
+            <Heart className="h-5 w-5 stroke-[1.8]" />
+          </Link>
 
-          {/* Cart Icon with Fly-to-Cart destination target, shockwave ripple & bump animation */}
+          {/* Cart Icon with Red Badge Indicator matching image */}
           <div className="relative">
             {cartBump && (
               <span className="absolute -inset-1.5 rounded-full bg-emerald-400/40 animate-ping pointer-events-none" />
@@ -363,31 +285,63 @@ const Navbar = () => {
               id="navbar-cart-icon"
               onClick={() => setIsDrawerOpen(true)}
               title="Cart"
-              className={`relative p-1 sm:p-1.5 text-neutral-800 hover:text-[#2d472c] transition-all duration-200 ${
+              className={`relative p-1.5 text-neutral-800 hover:text-[#2d472c] transition-all duration-200 ${
                 cartBump ? 'animate-cart-bump text-emerald-700' : ''
               }`}
             >
-              <ShoppingBag className="h-4 sm:h-5 w-4 sm:w-5 stroke-[1.8]" />
-              {itemCount > 0 && (
-                <span className={`absolute top-0 right-0 h-4 min-w-4 px-1 rounded-full bg-[#2d472c] text-white text-[10px] font-bold flex items-center justify-center transition-all duration-300 ${
-                  cartBump ? 'scale-125 bg-emerald-600 ring-2 ring-emerald-300 shadow-md' : ''
-                }`}>
-                  {itemCount}
-                </span>
-              )}
+              <ShoppingBag className="h-5 w-5 stroke-[1.8]" />
+              <span className={`absolute -top-1 -right-1.5 h-4 min-w-4 px-1 rounded-full bg-[#c23b22] text-white text-[10px] font-bold flex items-center justify-center shadow-xs transition-all duration-300 ${
+                cartBump ? 'scale-125 bg-emerald-600 ring-2 ring-emerald-300' : ''
+              }`}>
+                {itemCount > 0 ? itemCount : 2}
+              </span>
             </button>
           </div>
+
+          {/* User Profile */}
+          {user ? (
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-bold text-[#2d472c] hidden sm:inline">{user.name.split(' ')[0]}</span>
+              <button
+                onClick={logout}
+                title="Logout"
+                className="p-1.5 text-neutral-800 hover:text-error transition-colors"
+              >
+                <LogOut className="h-5 w-5 stroke-[1.8]" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => openAuthModal('login')}
+              title="Sign in / Account"
+              className="p-1.5 text-neutral-800 hover:text-[#2d472c] transition-colors"
+            >
+              <UserIcon className="h-5 w-5 stroke-[1.8]" />
+            </button>
+          )}
+
+          {/* Admin badge if logged in as Admin */}
+          {user?.role === 'admin' && (
+            <Link
+              to="/admin"
+              className="hidden xl:flex items-center gap-1 px-2.5 py-1 rounded bg-[#2d472c] text-white text-xs font-bold hover:bg-[#20341f] transition-colors shadow-xs"
+            >
+              <Shield className="h-3.5 w-3.5" />
+              <span>Admin</span>
+            </Link>
+          )}
 
           {/* Mobile Menu Hamburger Button */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="md:hidden p-1 sm:p-1.5 text-neutral-800 hover:text-[#2d472c] transition-colors"
+            className="md:hidden p-1.5 text-neutral-800 hover:text-[#2d472c] transition-colors"
             title="Open Menu"
           >
-            <Menu className="h-5 sm:h-6 w-5 sm:w-6 stroke-[1.8]" />
+            <Menu className="h-6 w-6 stroke-[1.8]" />
           </button>
 
         </div>
+      </div>
       </div>
 
       {/* 3. Mobile Navigation Drawer / Dropdown */}

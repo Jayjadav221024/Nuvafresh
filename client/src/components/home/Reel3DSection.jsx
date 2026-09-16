@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { ShoppingCart, Sparkles, Volume2, VolumeX } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { Play, Volume2, VolumeX, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { useContent } from '../../context/ContentContext';
 import API from '../../api/axiosInstance';
@@ -7,9 +8,10 @@ import API from '../../api/axiosInstance';
 const REELS_DATA = [
   {
     id: 1,
-    title: 'Ozone-Washing Pure Green Harvest',
-    crop: 'Farm Fresh Greens (O3 Cleaned)',
+    title: 'Green Grapes\n(Ozone Washed)',
+    crop: 'Vision Protection | Sunburn defense | Respiratory Health Support',
     price: 79,
+    mrp: 99,
     unit: '250g',
     poster: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=800',
     videoUrl: '/reel-ozone-wash-1.mp4',
@@ -24,9 +26,10 @@ const REELS_DATA = [
   },
   {
     id: 2,
-    title: 'Ozone Sanitization & Safe Produce',
-    crop: 'Ozone-Washed Fruits & Veggies',
+    title: 'Potato\n(Ozone Washed)',
+    crop: 'Vision Protection | Sunburn defense | Respiratory Health Support',
     price: 1350,
+    mrp: 1450,
     unit: '500ml',
     poster: 'https://images.unsplash.com/photo-1589927986089-35812388d1f4?w=800',
     videoUrl: '/reel-ozone-wash-2.mp4',
@@ -41,9 +44,10 @@ const REELS_DATA = [
   },
   {
     id: 3,
-    title: 'Vadodara Facility Live Sorting',
-    crop: 'Naturally Grown Produce',
+    title: 'Tomato\n(Ozone Washed)',
+    crop: 'Vision Protection | Sunburn defense | Respiratory Health Support',
     price: 160,
+    mrp: 180,
     unit: '300ml',
     poster: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?w=800',
     videoUrl: '/reel-ozone-wash-3.mp4',
@@ -58,9 +62,10 @@ const REELS_DATA = [
   },
   {
     id: 4,
-    title: 'Daily Sunrise Ozone Wash Dispatch',
-    crop: 'Chemical-Free Crisp Harvest',
+    title: 'Beetroot\n(Ozone Washed)',
+    crop: 'Vision Protection | Sunburn defense | Respiratory Health Support',
     price: 65,
+    mrp: 85,
     unit: '1 Kg',
     poster: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800',
     videoUrl: '/reel-ozone-wash-4.mp4',
@@ -72,130 +77,328 @@ const REELS_DATA = [
       unit: '1 Kg',
       images: ['https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800']
     }
+  },
+  {
+    id: 5,
+    title: 'Orange\n(Ozone Washed)',
+    crop: 'Vision Protection | Sunburn defense | Respiratory Health Support',
+    price: 120,
+    mrp: 150,
+    unit: '1 Kg',
+    poster: 'https://images.unsplash.com/photo-1547514701-42782101795e?w=800',
+    videoUrl: '/reel-ozone-wash-1.mp4',
+    product: {
+      _id: 'p-4',
+      title: 'Nagpur Valencia Oranges',
+      price: 150,
+      discountedPrice: 120,
+      unit: '1 Kg',
+      images: ['https://images.unsplash.com/photo-1547514701-42782101795e?w=800']
+    }
   }
 ];
 
+/* Card width and the gap between neighbouring cards, per breakpoint. Both are
+   real pixels because the fan is positioned by transform, not by layout - the
+   cards are stacked on one point and pushed outwards from it. */
+const metricsFor = (w) => {
+  if (w >= 1280) return { cardW: 340, spacing: 196 };
+  if (w >= 1024) return { cardW: 300, spacing: 172 };
+  if (w >= 640) return { cardW: 268, spacing: 150 };
+  return { cardW: 232, spacing: 92 };
+};
+
+const useCarouselMetrics = () => {
+  const [metrics, setMetrics] = useState(() =>
+    metricsFor(typeof window === 'undefined' ? 1280 : window.innerWidth)
+  );
+
+  useEffect(() => {
+    const onResize = () => setMetrics(metricsFor(window.innerWidth));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  return metrics;
+};
+
+const CARD_SPRING = { type: 'spring', stiffness: 60, damping: 18, mass: 0.9 };
+
+/**
+ * One card in the fan.
+ *
+ * Every card sits on the same centre point and is pushed out from it, so the
+ * depth cues are all derived from `offset` - how many places it is from the
+ * active card. Sliding the fan is then just a matter of re-deriving those from a
+ * new active index; nothing is re-laid out.
+ *
+ * Only the active card mounts a <video>. The others show their poster, which
+ * keeps four or five simultaneous video decodes off the page.
+ */
+const ReelCard = ({ reel, offset, cardW, spacing, isMuted, onToggleMute, onSelect, onAdd }) => {
+  const dist = Math.abs(offset);
+  const isActive = dist === 0;
+
+  return (
+    <motion.div
+      className="absolute top-0 cursor-pointer"
+      // Nearer the centre means nearer the front, so the active card overlaps both
+      // of its neighbours and the fan reads as having depth
+      style={{ left: '50%', width: cardW, marginLeft: -cardW / 2, zIndex: 10 - dist }}
+      initial={false}
+      animate={{
+        x: offset * spacing,
+        // Outer cards lean away from the centre, which is what turns a flat row
+        // of overlapping cards into a fan
+        rotate: offset * 5,
+        scale: 1 - dist * 0.13,
+        // Behind the active card they sit slightly low, as if further back
+        y: dist * 14,
+        opacity: dist > 2 ? 0 : 1,
+        filter: `brightness(${isActive ? 1 : 0.72})`
+      }}
+      transition={CARD_SPRING}
+      // Beyond the second neighbour the cards are invisible, so they must not
+      // swallow clicks meant for the ones behind them
+      onClick={() => !isActive && onSelect()}
+      aria-hidden={dist > 2}
+    >
+      <div
+        className={`rounded-[28px] bg-[#3a5233] p-3 sm:p-3.5 pb-4 shadow-[0_28px_60px_-24px_rgba(20,35,20,0.75)] ${
+          isActive ? 'ring-1 ring-white/10' : ''
+        }`}
+        style={{ pointerEvents: dist > 2 ? 'none' : 'auto' }}
+      >
+        {/* Media */}
+        <div
+          className="relative rounded-[20px] overflow-hidden bg-black"
+          style={{ height: cardW * 0.88 }}
+        >
+          {isActive ? (
+            <video
+              src={reel.videoUrl}
+              poster={reel.poster}
+              loop
+              autoPlay
+              playsInline
+              muted={isMuted}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <img
+              src={reel.poster}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+
+          {/* Play glyph on the resting cards; the active one plays already, so it
+              gets the sound toggle in the same spot instead */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isActive) onToggleMute();
+              else onSelect();
+            }}
+            aria-label={isActive ? (isMuted ? 'Unmute' : 'Mute') : `Play ${reel.title.replace('\n', ' ')}`}
+            className="absolute inset-0 flex items-center justify-center group"
+          >
+            <span className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/25 backdrop-blur-[2px] flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+              {isActive ? (
+                isMuted ? (
+                  <VolumeX className="w-6 h-6 text-white" />
+                ) : (
+                  <Volume2 className="w-6 h-6 text-white" />
+                )
+              ) : (
+                <Play className="w-6 h-6 text-white fill-white ml-0.5" />
+              )}
+            </span>
+          </button>
+        </div>
+
+        {/* Copy */}
+        <div className="px-1.5 pt-4">
+          <h3 className="font-display text-xl sm:text-2xl leading-[1.15] text-white whitespace-pre-line">
+            {reel.title}
+          </h3>
+
+          <p className="mt-2 text-[12px] sm:text-[13px] leading-snug text-white/85">
+            {reel.crop}
+          </p>
+
+          <p className="mt-3.5 text-[12px] sm:text-[13px] text-white/70">{reel.unit}</p>
+
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <p className="text-lg sm:text-xl text-white">
+              {reel.mrp > reel.price && (
+                <span className="mr-1.5 text-sm text-white/55 line-through">
+                  ₹{reel.mrp.toFixed(2)}
+                </span>
+              )}
+              <span className="font-semibold">₹{reel.price.toFixed(2)}</span>
+            </p>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAdd(e);
+              }}
+              className="shrink-0 rounded-full bg-[#efe6cf] hover:bg-white text-[#2d472c] text-sm px-6 py-1.5 transition-colors"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 const Reel3DSection = () => {
   const [reels, setReels] = useState(REELS_DATA);
+  const [activeIndex, setActiveIndex] = useState(Math.floor(REELS_DATA.length / 2));
   const [isMuted, setIsMuted] = useState(true);
   const { addToCart } = useCart();
+  const { getContent } = useContent();
+  const { cardW, spacing } = useCarouselMetrics();
+  const stageRef = useRef(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchLiveReels = async () => {
       try {
         const { data } = await API.get('/reels');
         if (data.success && data.reels && data.reels.length > 0) {
-          // Map backend reels to match 3D section format
-          const formatted = data.reels.map((r, i) => ({
-            id: r._id || i,
-            title: r.title,
-            crop: r.productTitle || 'Fresh Harvest',
-            price: r.productPrice || 99,
-            unit: '500g',
-            poster: r.poster || REELS_DATA[i % REELS_DATA.length]?.poster,
-            videoUrl: r.videoUrl,
-            product: {
-              _id: r._id || `p-${i}`,
+          const formatted = data.reels.map((r, i) => {
+            const fallback = REELS_DATA[i % REELS_DATA.length];
+            const price = r.productPrice || 99;
+            return {
+              id: r._id || i,
               title: r.productTitle || r.title,
-              price: r.productPrice ? Math.round(r.productPrice * 1.25) : 120,
-              discountedPrice: r.productPrice || 99,
-              unit: '500g',
-              images: [r.poster || 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=800']
-            }
-          }));
+              crop: r.description || fallback.crop,
+              price,
+              mrp: Math.round(price * 1.25),
+              unit: r.unit || '500g',
+              poster: r.poster || fallback.poster,
+              videoUrl: r.videoUrl,
+              product: {
+                _id: r._id || `p-${i}`,
+                title: r.productTitle || r.title,
+                price: Math.round(price * 1.25),
+                discountedPrice: price,
+                unit: r.unit || '500g',
+                images: [r.poster || fallback.poster]
+              }
+            };
+          });
           setReels(formatted);
+          setActiveIndex(Math.floor(formatted.length / 2));
         }
       } catch (e) {}
     };
     fetchLiveReels();
   }, []);
 
-  const { getContent } = useContent();
-  const badgeText = getContent('home.video_shopping', 'badgeText', 'Shoppable Farm Feeds');
-  const headline = getContent('home.video_shopping', 'headline', 'Watch, Learn & Buy Directly');
+  const headline = getContent('home.video_shopping', 'headline', 'Shop By Recipe');
+
+  // Shortest way round, so stepping from the last card to the first slides one
+  // place rather than rewinding the whole fan
+  const offsetOf = (index) => {
+    const n = reels.length;
+    let diff = index - activeIndex;
+    if (diff > n / 2) diff -= n;
+    if (diff < -n / 2) diff += n;
+    return diff;
+  };
+
+  const step = (dir) => setActiveIndex((prev) => (prev + dir + reels.length) % reels.length);
+
+  // The fan is taller than any single card: the active one is full size and the
+  // neighbours are pushed down, so the stage has to clear both
+  const stageHeight = cardW * 1.62 + 40;
 
   return (
-    <section id="video-shopping" className="py-10 bg-white px-4 sm:px-6 lg:px-8 overflow-hidden font-sans">
-      <div className="max-w-7xl mx-auto">
-        
+    <section id="video-shopping" className="py-12 sm:py-16 bg-white overflow-hidden font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
         {/* Section Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#eaf4ec] text-[#2d472c] text-xs font-bold mb-2">
-            <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-            <span>{badgeText}</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-[#2d472c] font-display tracking-tight">
+        <div className="text-center">
+          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-[#2d472c] tracking-tight">
             {headline}
           </h2>
+
+          {/* Hand-drawn brush rule, matching the other section headings */}
+          <svg
+            viewBox="0 0 320 16"
+            aria-hidden="true"
+            className="mx-auto mt-2 h-3 w-48 sm:w-64 md:w-80 text-[#2d472c]"
+          >
+            <path
+              d="M3 11c58-6 126-9 198-7 41 1 79 3 116 7-38-3-79-5-120-5-64-1-131 1-194 5z"
+              fill="currentColor"
+              opacity="0.9"
+            />
+          </svg>
         </div>
 
-        {/* 4 Video Reels Grid with compact height & width */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 items-stretch justify-center">
-          {reels.map((reel) => (
-            <div
+        {/* The fan. Cards overflow this box on both sides by design, so the
+            section clips them rather than the container scrolling. */}
+        <div
+          ref={stageRef}
+          className="relative mt-10 sm:mt-12 select-none"
+          style={{ height: stageHeight }}
+        >
+          {reels.map((reel, index) => (
+            <ReelCard
               key={reel.id}
-              className="group relative w-full aspect-[9/14] sm:aspect-[9/13.5] rounded-2xl overflow-hidden shadow-md hover:shadow-xl border border-secondary-200 bg-black flex flex-col justify-between p-3 sm:p-3.5 transition-all duration-300 hover:-translate-y-1"
-            >
-              {/* Background Autoplay Video */}
-              <video
-                src={reel.videoUrl}
-                poster={reel.poster}
-                loop
-                muted={isMuted}
-                autoPlay
-                playsInline
-                className="absolute inset-0 h-full w-full object-cover z-0 group-hover:scale-105 transition-transform duration-500"
-              />
-
-              {/* Gradient Overlays for Readability */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/40 z-0 pointer-events-none" />
-
-              {/* Top Bar with Live Tag and Sound Toggle */}
-              <div className="relative z-10 flex items-center justify-between">
-                <span className="px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] sm:text-xs font-bold text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shadow-sm">
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                  </span>
-                  Live
-                </span>
-                <button
-                  onClick={() => setIsMuted(!isMuted)}
-                  className="p-1.5 rounded-full bg-black/60 backdrop-blur-md text-white hover:bg-black/80 transition-colors shadow-sm"
-                  title={isMuted ? "Unmute" : "Mute"}
-                >
-                  {isMuted ? <VolumeX className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> : <Volume2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-400" />}
-                </button>
-              </div>
-
-              {/* Ultra-Modern Liquid Glassmorphism Bottom Card */}
-              <div className="relative z-10 p-3 sm:p-3.5 rounded-2xl bg-white/30 backdrop-blur-xl saturate-150 border border-white/40 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] space-y-2 group-hover:bg-white/40 group-hover:border-white/60 transition-all duration-300">
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-white leading-snug font-display line-clamp-1 drop-shadow-md">
-                    {reel.title}
-                  </h4>
-                  <p className="text-[10px] sm:text-xs text-neutral-100 font-medium line-clamp-1 drop-shadow-sm">
-                    {reel.crop}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between pt-1.5 border-t border-white/20">
-                  <div>
-                    <span className="text-xs sm:text-sm font-bold text-white drop-shadow-md">₹{reel.price}</span>
-                    <span className="text-[10px] sm:text-xs text-neutral-200 ml-0.5 drop-shadow-sm">/{reel.unit}</span>
-                  </div>
-                  <button
-                    onClick={(e) => addToCart(reel.product, 1, e)}
-                    className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-lg bg-[#2d472c]/90 hover:bg-[#2d472c] text-white text-[10px] sm:text-xs font-bold border border-emerald-400/30 shadow-md backdrop-blur-sm transition-all duration-200 hover:scale-105 active:scale-95"
-                  >
-                    <ShoppingCart className="h-3 w-3" />
-                    <span>Buy</span>
-                  </button>
-                </div>
-              </div>
-
-            </div>
+              reel={reel}
+              offset={offsetOf(index)}
+              cardW={cardW}
+              spacing={spacing}
+              isMuted={isMuted}
+              onToggleMute={() => setIsMuted((m) => !m)}
+              onSelect={() => setActiveIndex(index)}
+              onAdd={(e) => addToCart(reel.product, 1, e)}
+            />
           ))}
+        </div>
+
+        {/* Nav */}
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => step(-1)}
+            aria-label="Previous recipe"
+            className="w-10 h-10 rounded-full border border-[#2d472c]/25 text-[#2d472c] flex items-center justify-center hover:bg-[#2d472c] hover:text-white hover:border-[#2d472c] transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            {reels.map((reel, index) => (
+              <button
+                key={reel.id}
+                type="button"
+                onClick={() => setActiveIndex(index)}
+                aria-label={`Go to ${reel.title.replace('\n', ' ')}`}
+                aria-current={index === activeIndex}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  index === activeIndex ? 'w-6 bg-[#2d472c]' : 'w-1.5 bg-[#2d472c]/25'
+                }`}
+              />
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => step(1)}
+            aria-label="Next recipe"
+            className="w-10 h-10 rounded-full border border-[#2d472c]/25 text-[#2d472c] flex items-center justify-center hover:bg-[#2d472c] hover:text-white hover:border-[#2d472c] transition-colors"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
 
       </div>
@@ -204,4 +407,3 @@ const Reel3DSection = () => {
 };
 
 export default Reel3DSection;
-

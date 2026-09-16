@@ -59,6 +59,16 @@ const AdminEmailSetup = lazy(() => import('./pages/admin/AdminEmailSetup'));
 const AdminEmailTemplates = lazy(() => import('./pages/admin/AdminEmailTemplates'));
 const AdminFAQs = lazy(() => import('./pages/admin/AdminFAQs'));
 
+// GoKwik Admin Module Pages
+const AdminGoKwikDashboard = lazy(() => import('./pages/admin/gokwik/AdminGoKwikDashboard'));
+const AdminGoKwikSettings = lazy(() => import('./pages/admin/gokwik/AdminGoKwikSettings'));
+const AdminGoKwikCOD = lazy(() => import('./pages/admin/gokwik/AdminGoKwikCOD'));
+const AdminGoKwikRTO = lazy(() => import('./pages/admin/gokwik/AdminGoKwikRTO'));
+const AdminGoKwikOrders = lazy(() => import('./pages/admin/gokwik/AdminGoKwikOrders'));
+const AdminGoKwikAnalytics = lazy(() => import('./pages/admin/gokwik/AdminGoKwikAnalytics'));
+const AdminGoKwikWebhooks = lazy(() => import('./pages/admin/gokwik/AdminGoKwikWebhooks'));
+const AdminGoKwikLogs = lazy(() => import('./pages/admin/gokwik/AdminGoKwikLogs'));
+
 const App = () => {
   return (
     <Routes>
@@ -147,6 +157,16 @@ const App = () => {
         <Route path="audit-logs" element={<AdminAuditLogs />} />
         <Route path="roles" element={<AdminRoles />} />
         <Route path="faqs" element={<AdminFAQs />} />
+
+        {/* GoKwik Admin Module Routes */}
+        <Route path="gokwik" element={<AdminGoKwikDashboard />} />
+        <Route path="gokwik/settings" element={<AdminGoKwikSettings />} />
+        <Route path="gokwik/cod" element={<AdminGoKwikCOD />} />
+        <Route path="gokwik/rto" element={<AdminGoKwikRTO />} />
+        <Route path="gokwik/orders" element={<AdminGoKwikOrders />} />
+        <Route path="gokwik/analytics" element={<AdminGoKwikAnalytics />} />
+        <Route path="gokwik/webhooks" element={<AdminGoKwikWebhooks />} />
+        <Route path="gokwik/logs" element={<AdminGoKwikLogs />} />
       </Route>
 
       {/* Fallback */}

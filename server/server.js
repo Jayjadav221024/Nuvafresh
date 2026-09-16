@@ -16,6 +16,7 @@ import collectionRoutes from './routes/collectionRoutes.js';
 import transferRoutes from './routes/transferRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import contentRoutes from './routes/contentRoutes.js';
+import gokwikRoutes from './routes/gokwikRoutes.js';
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.use('/api/collections', collectionRoutes);
 app.use('/api/transfers', transferRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/gokwik', gokwikRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

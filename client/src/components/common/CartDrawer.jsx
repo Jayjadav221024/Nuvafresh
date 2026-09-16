@@ -108,11 +108,29 @@ const CartDrawer = () => {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState('');
   
+  // GoKwik Feature Integration State
+  const [gokwikConfig, setGokwikConfig] = useState({ enabled: false });
+
   // UI Interactive States
   const [isDiscountOpen, setIsDiscountOpen] = useState(false);
   const [isOrderNoteOpen, setIsOrderNoteOpen] = useState(false);
   const [orderNote, setOrderNote] = useState('');
   const [copiedShare, setCopiedShare] = useState(false);
+
+  // Fetch GoKwik public config on mount
+  React.useEffect(() => {
+    const checkGoKwik = async () => {
+      try {
+        const { data } = await API.get('/gokwik/public-config');
+        if (data?.success && data.enabled) {
+          setGokwikConfig(data);
+        }
+      } catch (e) {
+        // Fall back quietly to native checkout
+      }
+    };
+    checkGoKwik();
+  }, []);
 
   // Delivery date estimation: 2 days ahead
   const getDeliveryDateRange = () => {
@@ -524,8 +542,17 @@ const CartDrawer = () => {
                     disabled={cart.length === 0 || isCheckingOut}
                     className="w-full py-3.5 px-4 rounded-full bg-[#2d472c] hover:bg-[#20341f] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-98 disabled:opacity-50"
                   >
-                    <QrCode className="h-4 w-4 text-emerald-300" />
-                    <span>Proceed to Pay & Scan QR</span>
+                    {gokwikConfig.enabled ? (
+                      <>
+                        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>Instant Checkout with GoKwik</span>
+                      </>
+                    ) : (
+                      <>
+                        <QrCode className="h-4 w-4 text-emerald-300" />
+                        <span>Proceed to Pay & Scan QR</span>
+                      </>
+                    )}
                     <ArrowRight className="h-4 w-4 ml-1" />
                   </button>
 
