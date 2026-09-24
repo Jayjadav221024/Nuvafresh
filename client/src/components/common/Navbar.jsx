@@ -173,7 +173,7 @@ const Navbar = () => {
             />
           ) : (
             <div className="flex flex-col leading-none">
-              <span className="text-2xl sm:text-3xl font-serif font-bold text-[#2d472c] tracking-tight">Nuva</span>
+              <span className="text-2xl sm:text-3xl font-display font-bold text-[#2d472c] tracking-tight">Nuva</span>
               <span className="text-[9px] sm:text-[10px] font-sans uppercase font-bold tracking-[0.25em] text-[#557153]">NUTRITION</span>
             </div>
           )}

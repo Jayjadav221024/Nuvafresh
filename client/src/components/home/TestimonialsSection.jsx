@@ -86,7 +86,7 @@ const TestimonialsSection = () => {
           <div className="flex-1 space-y-6 text-left relative">
             
             {/* Subtle quotation mark symbol in top right of text */}
-            <div className="absolute -top-3 right-4 text-3xl font-serif text-[#788572]/40 select-none">
+            <div className="absolute -top-3 right-4 text-3xl font-display text-[#788572]/40 select-none">
               “
             </div>
 

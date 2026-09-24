@@ -2,7 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Official Brand Fonts: Inter (400, 600) & Quicksand (500, 700) */
+/* Brand fonts
+   Primary:   5th Avenue - headings and display type (font-display)
+   Secondary: Quicksand  - body copy and UI (font-sans / font-body)
+   Inter stays for the admin only. */
+
+/* 5th Avenue is not on Google Fonts, so it is self-hosted. Drop the file(s)
+   from the design team into client/public/fonts/ under these names. The
+   browser takes the first format that exists, so any one of them is enough.
+   Until a file is there, headings fall back to Playfair Display. */
+@font-face {
+  font-family: '5th Avenue';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/5th-avenue.woff2") format("woff2"),
+       url("/fonts/5th-avenue.woff") format("woff"),
+       url("/fonts/5th-avenue.otf") format("opentype"),
+       url("/fonts/5th-avenue.ttf") format("truetype");
+}
+
 @font-face {
   font-family: 'Inter';
   font-weight: 600;
@@ -92,9 +111,9 @@
   --color-warning: #f59e0b;
   --color-error: #ef4444;
 
-  --font-family-sans: 'Inter', 'Quicksand', system-ui, -apple-system, sans-serif;
-  --font-family-display: 'Quicksand', '5thAvenue', 'Playfair Display', serif;
-  --font-family-body: 'Inter', sans-serif;
+  --font-family-sans: 'Quicksand', system-ui, -apple-system, sans-serif;
+  --font-family-display: '5th Avenue', 'Playfair Display', serif;
+  --font-family-body: 'Quicksand', system-ui, sans-serif;
 
   /* Shopify admin's own stack. The Noto faces come before the system fonts so
      Arabic, Hebrew and Thai fall back to a face that matches Inter's metrics

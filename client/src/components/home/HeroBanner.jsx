@@ -7,12 +7,6 @@ import {
 } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { useContent } from '../../context/ContentContext';
-import { FRESH_PRODUCE_BASE64 } from '../../assets/freshProduceBase64';
-import { PULSES_LENTILS_BASE64 } from '../../assets/pulsesLentilsBase64';
-import { GRAINS_STAPLES_BASE64 } from '../../assets/grainsStaplesBase64';
-import { SPICES_SEASONINGS_BASE64 } from '../../assets/spicesSeasoningsBase64';
-import { OILS_GHEE_BASE64 } from '../../assets/oilsGheeBase64';
-import { HEALTHY_SWEETENERS_BASE64 } from '../../assets/healthySweetenersBase64';
 
 const HERO_PRODUCTS = [
   {
@@ -22,48 +16,48 @@ const HERO_PRODUCTS = [
     price: 120.00,
     unit: '1 kg',
     description: 'Elaichi Banana, also known as "Yelaki" in Karnataka or "Chiniya Banana" in North India, is a small-sized, sweet variant of banana known for its rich aroma and specific taste.',
-    image: '/hero-elaichi-banana-dish.jpg',
+    image: '/hero-elaichi-banana.png',
     category: 'Fresh Produce'
   },
   {
     _id: 'hero-prod-2',
-    title: 'MAHABALESHWAR STRAWBERRIES',
-    badge: 'SEASONAL BEST',
-    price: 250.00,
-    unit: '250g',
-    description: 'Mahabaleshwar Strawberries are luscious, bright red berries grown in the cool climate of Mahabaleshwar, renowned for their intense sweetness and natural fragrance.',
-    image: '/hero-strawberry-dish.jpg',
+    title: 'FRESH BUTTON MUSHROOMS',
+    badge: 'FARM FRESH',
+    price: 60.00,
+    unit: '200g',
+    description: 'Fresh Button Mushrooms are firm, creamy-white and mild in flavour, harvested young for a tender bite that soaks up every sauce, stir-fry and curry.',
+    image: '/hero-mushroom.png',
     category: 'Fresh Produce'
   },
   {
     _id: 'hero-prod-3',
-    title: 'ROYAL ALPHONSO MANGOES',
+    title: 'A2 COW GHEE',
     badge: 'BEST SELLER',
     price: 850.00,
-    unit: '1 Dozen',
-    description: 'Alphonso Mango, known as the "King of Mangoes", is famed for its golden saffron color, heavenly aroma, and unmatched rich creamy texture.',
-    image: '/hero-mango-dish.jpg',
-    category: 'Fresh Produce'
+    unit: '500 ml',
+    description: 'A2 Cow Ghee is slow-cooked from the milk of desi cows using the traditional bilona method, giving it a rich golden grain, nutty aroma and wholesome goodness.',
+    image: '/hero-a2-ghee.png',
+    category: 'Oils & Ghee'
   },
   {
     _id: 'hero-prod-4',
-    title: 'ORGANIC HASS AVOCADO',
-    badge: 'FARM FRESH',
-    price: 180.00,
-    unit: '1 Pc',
-    description: 'Organic Hass Avocado is a nutrient-rich superfood with a creamy texture, subtle nutty flavor, and healthy essential fatty acids.',
-    image: '/hero-avocado-dish.jpg',
-    category: 'Fresh Produce'
+    title: 'ORGANIC TURMERIC POWDER',
+    badge: 'PURE & NATURAL',
+    price: 120.00,
+    unit: '200g',
+    description: 'Organic Turmeric Powder is stone-ground from sun-dried haldi roots, rich in natural curcumin with a deep golden colour and earthy, warm aroma.',
+    image: '/hero-turmeric.png',
+    category: 'Spices & Seasonings'
   }
 ];
 
 const HERO_CATEGORIES = [
-  { id: 'fresh-produce', title: 'Fresh Produce', image: FRESH_PRODUCE_BASE64 },
-  { id: 'pulses-lentils', title: 'Pulses & Lentils', image: PULSES_LENTILS_BASE64 },
-  { id: 'grains-staples', title: 'Grains & Staples', image: GRAINS_STAPLES_BASE64 },
-  { id: 'spices-seasonings', title: 'Spices & Seasonings', image: SPICES_SEASONINGS_BASE64 },
-  { id: 'oils-ghee', title: 'Oils & Ghee', image: OILS_GHEE_BASE64 },
-  { id: 'healthy-sweeteners', title: 'Healthy Sweeteners', image: HEALTHY_SWEETENERS_BASE64 }
+  { id: 'fresh-produce', title: 'Fresh Produce', image: '/categories/fresh-produce.png' },
+  { id: 'pulses-lentils', title: 'Pulses & Lentils', image: '/categories/pulses-lentils.png' },
+  { id: 'grains-staples', title: 'Grains & Staples', image: '/categories/grains-staples.png' },
+  { id: 'spices-seasonings', title: 'Spices & Seasonings', image: '/categories/spices-seasonings.png' },
+  { id: 'oils-ghee', title: 'Oils & Ghee', image: '/categories/oils-ghee.png' },
+  { id: 'healthy-sweeteners', title: 'Healthy Sweeteners', image: '/categories/healthy-sweeteners.png' }
 ];
 
 /* Cream line-art on the dark green disc, matching the reference. */
@@ -188,60 +182,33 @@ const HeroRim = ({ rim }) => (
   </motion.svg>
 );
 
+/* The product shots are wide, angled plates rather than round top-down dishes,
+   so the dish box is wider than it is tall. */
+const DISH_ASPECT = 1.3;
+
 /**
  * A hero dish bolted to the wheel rim. It rolls with the wheel on every turn -
  * the old one travels off stage while the next rides up into the panel - and
- * spins slowly on its own while hovered.
+ * lifts slightly while hovered.
+ *
+ * The shots are transparent PNGs, so there is no circular crop: the plate's own
+ * outline is the edge, and the shadow is a drop-shadow that follows it.
  */
-const HeroDish = ({ product, size }) => {
-  // Own spin, kept separate from the wheel roll so the two compose
-  const spin = useMotionValue(0);
-  const spinRun = useRef(null);
-
-  const startSpin = () => {
-    spinRun.current?.stop();
-    spinRun.current = animate(spin, spin.get() + 360, {
-      duration: 9,
-      ease: 'linear',
-      repeat: Infinity,
-      repeatType: 'loop'
-    });
-  };
-
-  // Coast to a halt instead of snapping or unwinding back to zero
-  const stopSpin = () => {
-    spinRun.current?.stop();
-    spinRun.current = animate(spin, spin.get() + 24, { duration: 0.7, ease: 'easeOut' });
-  };
-
-  useEffect(() => () => spinRun.current?.stop(), []);
-
-  return (
-    <motion.div
-      className="group relative"
-      style={{ width: size, height: size, rotate: spin }}
-      onHoverStart={startSpin}
-      onHoverEnd={stopSpin}
-    >
-      {/* Just the product, with no ring or border around it. The only treatment
-          is a soft ambient shadow for depth - kept near-symmetric because the
-          product rolls with the wheel, so a strongly directional shadow would
-          swing round with it instead of staying put on the ground. */}
-      <div
-        className="relative w-full h-full rounded-full overflow-hidden"
-        style={{
-          boxShadow: `0 ${size * 0.05}px ${size * 0.13}px -${size * 0.04}px rgba(45,71,44,0.22), 0 0 ${size * 0.07}px rgba(45,71,44,0.07)`
-        }}
-      >
-        <img
-          src={product.image}
-          alt={product.title}
-          className="w-full h-full object-cover select-none pointer-events-none"
-        />
-      </div>
-    </motion.div>
-  );
-};
+const HeroDish = ({ product, size }) => (
+  <motion.div
+    className="relative"
+    style={{ width: size * DISH_ASPECT, height: size }}
+    whileHover={{ scale: 1.04, y: -6 }}
+    transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+  >
+    <img
+      src={product.image}
+      alt={product.title}
+      className="w-full h-full object-contain select-none pointer-events-none"
+      style={{ filter: `drop-shadow(0 ${size * 0.04}px ${size * 0.05}px rgba(45,71,44,0.22))` }}
+    />
+  </motion.div>
+);
 
 /**
  * One card in the strip. Selecting the card body rolls the wheel to that
@@ -279,11 +246,11 @@ const StripCard = ({ product, isActive, onSelect }) => {
       }`}
     >
       {/* Product image, straddling the top of the arch */}
-      <div className="absolute left-1/2 -translate-x-1/2 -top-11 sm:-top-14 w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden">
+      <div className="absolute left-1/2 -translate-x-1/2 -top-11 sm:-top-14 w-32 h-24 sm:w-44 sm:h-32">
         <img
           src={product.image}
           alt={product.title}
-          className="w-full h-full object-cover select-none pointer-events-none"
+          className="w-full h-full object-contain select-none pointer-events-none drop-shadow-[0_8px_10px_rgba(45,71,44,0.2)]"
         />
       </div>
 
@@ -681,6 +648,9 @@ const HeroBanner = () => {
                     // Resting slot is +90deg: the bottom of the wheel, directly
                     // under the hub, which is where the product sits.
                     const a = ((90 + i * STEP) * Math.PI) / 180;
+                    // The wheel is turned -i*STEP when product i is on stage, so
+                    // pre-rotating its slot by +i*STEP lands the plate upright.
+                    // Round dishes never needed this; angled shots do.
                     return (
                       <div
                         key={product._id}
@@ -688,8 +658,9 @@ const HeroBanner = () => {
                         style={{
                           left: size / 2 + R * Math.cos(a),
                           top: size / 2 + R * Math.sin(a),
-                          marginLeft: -D / 2,
-                          marginTop: -D / 2
+                          marginLeft: -(D * DISH_ASPECT) / 2,
+                          marginTop: -D / 2,
+                          transform: `rotate(${i * STEP}deg)`
                         }}
                       >
                         <HeroDish product={product} size={D} />
@@ -708,7 +679,7 @@ const HeroBanner = () => {
                   key={activeProduct.badge}
                   {...COPY_MOTION}
                   transition={COPY_TRANSITION}
-                  className="bg-[#2d472c] text-[#f4efe4] px-5 py-2 font-serif font-bold text-xs sm:text-sm tracking-widest uppercase shadow-xs border-l-4 border-[#8e9f8b]"
+                  className="bg-[#2d472c] text-[#f4efe4] px-5 py-2 font-display font-bold text-xs sm:text-sm tracking-widest uppercase shadow-xs border-l-4 border-[#8e9f8b]"
                 >
                   {activeProduct.badge}
                 </motion.div>
@@ -739,7 +710,7 @@ const HeroBanner = () => {
                   <ChevronLeft className="w-4 h-4" />
                 </button>
 
-                <span className="text-xs font-bold text-neutral-600 font-mono tracking-wider">
+                <span className="text-xs font-bold text-neutral-600 font-sans tabular-nums tracking-wider">
                   0{activeIndex + 1} / 0{HERO_PRODUCTS.length}
                 </span>
 

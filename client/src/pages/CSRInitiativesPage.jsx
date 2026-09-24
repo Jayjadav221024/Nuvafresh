@@ -91,7 +91,7 @@ const CSRInitiativesPage = () => {
               className="relative aspect-square sm:aspect-[4/4.5] rounded-3xl bg-[#374e33] p-6 sm:p-7 flex flex-col items-center justify-center text-center text-white shadow-xl hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden group cursor-default"
             >
               {/* Huge Background Number Watermark matching screenshot */}
-              <span className="absolute inset-0 flex items-center justify-center text-[180px] sm:text-[210px] font-serif font-black text-white/[0.08] pointer-events-none select-none group-hover:scale-105 transition-transform duration-500">
+              <span className="absolute inset-0 flex items-center justify-center text-[180px] sm:text-[210px] font-display font-black text-white/[0.08] pointer-events-none select-none group-hover:scale-105 transition-transform duration-500">
                 {pillar.number}
               </span>
 

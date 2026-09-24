@@ -69,9 +69,10 @@ export default {
         error: 'var(--color-error)',
       },
       fontFamily: {
-        sans: ['Inter', 'Quicksand', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Quicksand', 'Playfair Display', 'serif'],
-        body: ['Inter', 'sans-serif'],
+        // Keep in step with --font-family-* in src/index.css
+        sans: ['Quicksand', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['5th Avenue', 'Playfair Display', 'serif'],
+        body: ['Quicksand', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         xs: 'var(--font-size-xs)',

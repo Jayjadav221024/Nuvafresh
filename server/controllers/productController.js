@@ -108,6 +108,13 @@ export const getProductById = async (req, res) => {
       product = /^[0-9a-fA-F]{24}$/.test(id)
         ? await Product.findById(id).lean()
         : await Product.findOne({ slug: id }).lean();
+
+      // Stored slugs carry a random 4-digit suffix (see the Product pre-save
+      // hook), so a clean handle like "khapli-wheat-flour" - the one the old
+      // Shopify store used - would never match exactly. Fall back to it.
+      if (!product && /^[a-z0-9-]+$/i.test(id)) {
+        product = await Product.findOne({ slug: new RegExp(`^${id}-\\d{4}$`, 'i') }).lean();
+      }
     } catch (e) {}
 
     if (!product) {

@@ -75,12 +75,12 @@ const VisualStoriesSection = () => {
               {(item.headline || item.boldHeadline) && (
                 <div className="absolute bottom-6 left-5 right-5 z-10 text-left">
                   {item.headline && (
-                    <p className="text-sm sm:text-base text-white/90 font-serif italic leading-none">
+                    <p className="text-sm sm:text-base text-white/90 font-display italic leading-none">
                       {item.headline}
                     </p>
                   )}
                   {item.boldHeadline && (
-                    <p className={`text-2xl sm:text-3xl font-extrabold uppercase tracking-tight leading-tight ${item.boldHeadline.includes('goodness') ? 'text-amber-400 font-serif italic normal-case text-xl' : 'text-white font-sans'}`}>
+                    <p className={`text-2xl sm:text-3xl font-extrabold uppercase tracking-tight leading-tight ${item.boldHeadline.includes('goodness') ? 'text-amber-400 font-display italic normal-case text-xl' : 'text-white font-sans'}`}>
                       {item.boldHeadline}
                     </p>
                   )}
