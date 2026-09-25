@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence, useMotionValue, useInView, animate } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, useInView, animate } from 'framer-motion';
 import {
   ChevronRight, ChevronLeft, Linkedin, Instagram, Twitter, Facebook,
   Heart, ShoppingCart, Minus, Plus
@@ -16,7 +16,9 @@ const HERO_PRODUCTS = [
     price: 120.00,
     unit: '1 kg',
     description: 'Elaichi Banana, also known as "Yelaki" in Karnataka or "Chiniya Banana" in North India, is a small-sized, sweet variant of banana known for its rich aroma and specific taste.',
-    image: '/hero-elaichi-banana.png',
+    image: '/hero-elaichi-banana-top.png',
+    // Shot straight down on a round plate, so it spins flat like a real dish
+    topDown: true,
     category: 'Fresh Produce'
   },
   {
@@ -193,22 +195,74 @@ const DISH_ASPECT = 1.3;
  *
  * The shots are transparent PNGs, so there is no circular crop: the plate's own
  * outline is the edge, and the shadow is a drop-shadow that follows it.
+ *
+ * While hovered the dish spins in place. A top-down shot of a round plate
+ * (`topDown`) simply rotates clockwise, which is exactly how a real plate
+ * spinning on the table looks from above. An angled shot can't do that without
+ * skewing the food, so it turns about its own vertical axis in 3D instead.
+ * On leave it carries on the same way to the next full turn and settles there.
  */
-const HeroDish = ({ product, size }) => (
-  <motion.div
-    className="relative"
-    style={{ width: size * DISH_ASPECT, height: size }}
-    whileHover={{ scale: 1.04, y: -6 }}
-    transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-  >
-    <img
-      src={product.image}
-      alt={product.title}
-      className="w-full h-full object-contain select-none pointer-events-none"
-      style={{ filter: `drop-shadow(0 ${size * 0.04}px ${size * 0.05}px rgba(45,71,44,0.22))` }}
-    />
-  </motion.div>
-);
+const DISH_SPIN_SECONDS = 6; // One full turn while hovered
+const DISH_PERSPECTIVE = 1400; // px - lower = stronger 3D depth (angled shots only)
+
+const HeroDish = ({ product, size }) => {
+  const spin = useMotionValue(0);
+  const spinRun = useRef(null);
+  // Angled shots: negative rotateY moves the near side left, which reads as
+  // clockwise seen from above. Perspective lives in the transform itself because
+  // the wrapper's filter would otherwise flatten the 3D.
+  const turn = useTransform(spin, (deg) =>
+    product.topDown
+      ? `rotate(${deg}deg)`
+      : `perspective(${DISH_PERSPECTIVE}px) rotateY(${-deg}deg)`
+  );
+
+  useEffect(() => () => spinRun.current?.stop(), []);
+
+  const startSpin = () => {
+    spinRun.current?.stop();
+    const from = spin.get();
+    spinRun.current = animate(spin, [from, from + 360], {
+      duration: DISH_SPIN_SECONDS,
+      ease: 'linear',
+      repeat: Infinity
+    });
+  };
+
+  const stopSpin = () => {
+    spinRun.current?.stop();
+    const current = spin.get();
+    const rest = Math.ceil(current / 360) * 360;
+    // Remaining distance sets the duration, so the plate keeps roughly its pace
+    spinRun.current = animate(spin, rest, {
+      duration: Math.max(0.35, ((rest - current) / 360) * DISH_SPIN_SECONDS * 0.5),
+      ease: [0.22, 1, 0.36, 1]
+    });
+  };
+
+  return (
+    <motion.div
+      className="relative"
+      // Shadow sits on the wrapper, not the spinning image, so it keeps falling downward
+      style={{
+        width: size * DISH_ASPECT,
+        height: size,
+        filter: `drop-shadow(0 ${size * 0.04}px ${size * 0.05}px rgba(45,71,44,0.22))`
+      }}
+      whileHover={{ scale: 1.04, y: -6 }}
+      transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+      onHoverStart={startSpin}
+      onHoverEnd={stopSpin}
+    >
+      <motion.img
+        src={product.image}
+        alt={product.title}
+        className="w-full h-full object-contain select-none pointer-events-none"
+        style={{ transform: turn }}
+      />
+    </motion.div>
+  );
+};
 
 /**
  * One card in the strip. Selecting the card body rolls the wheel to that
@@ -239,11 +293,10 @@ const StripCard = ({ product, isActive, onSelect }) => {
           onSelect();
         }
       }}
-      className={`relative cursor-pointer rounded-t-[64px] sm:rounded-t-[80px] rounded-b-3xl border px-3 pt-14 sm:pt-[74px] pb-9 text-center transition-all duration-200 ${
-        isActive
+      className={`relative cursor-pointer rounded-t-[64px] sm:rounded-t-[80px] rounded-b-3xl border px-3 pt-14 sm:pt-[74px] pb-9 text-center transition-all duration-200 ${isActive
           ? 'border-[#2d472c] bg-white/70 shadow-[0_18px_36px_-22px_rgba(45,71,44,0.6)]'
           : 'border-[#9fae97] bg-transparent hover:bg-white/45'
-      }`}
+        }`}
     >
       {/* Product image, straddling the top of the arch */}
       <div className="absolute left-1/2 -translate-x-1/2 -top-11 sm:-top-14 w-32 h-24 sm:w-44 sm:h-32">
@@ -567,14 +620,14 @@ const HeroBanner = () => {
 
   const dynamicCategories = (heroSection.categoryItems && heroSection.categoryItems.length > 0)
     ? heroSection.categoryItems.map((item, idx) => {
-        const fallback = HERO_CATEGORIES[idx] || HERO_CATEGORIES[0];
-        return {
-          id: `hero-cat-${idx}`,
-          title: item.title || fallback.title,
-          image: item.image && item.image.trim() !== '' ? item.image : fallback.image,
-          link: item.link || `/shop?category=${encodeURIComponent(item.title || fallback.title)}`
-        };
-      })
+      const fallback = HERO_CATEGORIES[idx] || HERO_CATEGORIES[0];
+      return {
+        id: `hero-cat-${idx}`,
+        title: item.title || fallback.title,
+        image: item.image && item.image.trim() !== '' ? item.image : fallback.image,
+        link: item.link || `/shop?category=${encodeURIComponent(item.title || fallback.title)}`
+      };
+    })
     : HERO_CATEGORIES;
 
   /* The negative margin slides the hero up under the nav row, which is

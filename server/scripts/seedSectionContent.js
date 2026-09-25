@@ -317,27 +317,30 @@ export const MASTER_CMS_SECTIONS = [
     sectionKey: 'home.instagram',
     page: 'HOME PAGE',
     title: 'Instagram & UGC Section',
-    subtitle: 'Instagram handle, headline, follower callout, and button link.',
+    subtitle: 'Come say Hi band: phone mockup, heading, handle button and profile QR code.',
     fieldsSchema: [
-      { name: 'handle', label: 'Instagram Handle', type: 'text' },
-      { name: 'title', label: 'Section Title', type: 'text' },
-      { name: 'subtitle', label: 'Follower Callout Subtext', type: 'textarea' },
-      { name: 'buttonText', label: 'Follow Button Label', type: 'text' },
-      { name: 'instagramUrl', label: 'Instagram Profile URL', type: 'text' }
+      { name: 'headingLine1', label: 'Heading Line 1', type: 'text' },
+      { name: 'headingLine2', label: 'Heading Line 2', type: 'text' },
+      { name: 'profileHandle', label: 'Instagram Handle', type: 'text' },
+      { name: 'profileUrl', label: 'Instagram Profile URL', type: 'text' },
+      { name: 'phoneImage', label: 'Phone Mockup Image', type: 'image' },
+      { name: 'qrImage', label: 'Profile QR Code Image', type: 'image' }
     ],
     defaultFields: {
-      handle: '@nuvanutrition',
-      title: 'Follow our daily farm harvest on Instagram',
-      subtitle: 'Join 24,000+ conscious food lovers witnessing sunrise harvests, cold ozone washing, and healthy recipes.',
-      buttonText: 'Follow @nuvanutrition',
-      instagramUrl: 'https://instagram.com'
+      headingLine1: 'Come say Hi...',
+      headingLine2: 'on Instagram',
+      profileHandle: '@nuva_nutrition',
+      profileUrl: 'https://www.instagram.com/nuva_nutrition/',
+      phoneImage: '/instagram/nuva-instagram-phone.png',
+      qrImage: '/instagram/nuva-instagram-qr.png'
     },
     fields: {
-      handle: '@nuvanutrition',
-      title: 'Follow our daily farm harvest on Instagram',
-      subtitle: 'Join 24,000+ conscious food lovers witnessing sunrise harvests, cold ozone washing, and healthy recipes.',
-      buttonText: 'Follow @nuvanutrition',
-      instagramUrl: 'https://instagram.com'
+      headingLine1: 'Come say Hi...',
+      headingLine2: 'on Instagram',
+      profileHandle: '@nuva_nutrition',
+      profileUrl: 'https://www.instagram.com/nuva_nutrition/',
+      phoneImage: '/instagram/nuva-instagram-phone.png',
+      qrImage: '/instagram/nuva-instagram-qr.png'
     },
     isEdited: false
   },

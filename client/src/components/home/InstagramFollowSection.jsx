@@ -1,72 +1,145 @@
 import React from 'react';
-import { Instagram, ArrowUp, Heart, MessageCircle, Send, Bookmark, Sparkles, CheckCircle2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowUp } from 'lucide-react';
 import { useContent } from '../../context/ContentContext';
-import { INSTAGRAM_3D_PHONES_BASE64 } from '../../assets/instagram3DPhonesBase64';
 
+const BAND = '#e9e1cd';
+
+/**
+ * The beige band behind the section. Its top edge is not level: it starts low
+ * on the left and climbs gently to a taller, rounder corner on the right, which
+ * is what gives the band its tilted-card look. Drawn as an SVG stretched to the
+ * band's box; the band's height is fixed per breakpoint, so the stretch is small
+ * and the corners stay round.
+ */
+const BandShape = () => (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 1046 320"
+    preserveAspectRatio="none"
+    className="absolute inset-0 w-full h-full"
+  >
+    <path
+      d="M0 100 Q0 50 50 47 L974 2 Q1046 0 1046 72 L1046 284 Q1046 320 1010 320 L36 320 Q0 320 0 284 Z"
+      fill={BAND}
+    />
+  </svg>
+);
+
+/**
+ * "Come say Hi... on Instagram".
+ *
+ * A phone showing the Nuva Instagram profile hangs over the left of the band,
+ * breaking out above and below it; the heading and handle sit in the middle,
+ * and the profile QR code stands on the band's floor in a white arch on the right.
+ * On phones the QR is dropped - it can't be scanned from the screen it is on -
+ * and the handle button is the way through instead.
+ */
 const InstagramFollowSection = () => {
   const { getContent } = useContent();
-  const handle = getContent('home.instagram', 'handle', '@nuvanutrition');
-  const title = getContent('home.instagram', 'title', 'Follow our daily farm harvest on Instagram');
-  const subtitle = getContent('home.instagram', 'subtitle', 'Join 24,000+ conscious food lovers witnessing sunrise harvests, cold ozone washing, and healthy recipes.');
-  const buttonText = getContent('home.instagram', 'buttonText', 'Follow @nuvanutrition');
-  const instagramUrl = getContent('home.instagram', 'instagramUrl', 'https://instagram.com');
+  const headingLine1 = getContent('home.instagram', 'headingLine1', 'Come say Hi...');
+  const headingLine2 = getContent('home.instagram', 'headingLine2', 'on Instagram');
+  const handle = getContent('home.instagram', 'profileHandle', '@nuva_nutrition');
+  const profileUrl = getContent('home.instagram', 'profileUrl', 'https://www.instagram.com/nuva_nutrition/');
+  const phoneImage = getContent('home.instagram', 'phoneImage', '') || '/instagram/nuva-instagram-phone.png';
+  const qrImage = getContent('home.instagram', 'qrImage', '') || '/instagram/nuva-instagram-qr.png';
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <section className="relative w-full bg-gradient-to-b from-neutral-50/50 via-white to-[#fbfaf8] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden font-sans border-t border-neutral-100">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12 lg:gap-16">
-        
-        {/* Left Side: Authentic High-Resolution 3D iPhone Multi-Layer Perspective Canvas */}
-        <div className="relative w-full md:w-1/2 flex items-center justify-center min-h-[380px] sm:min-h-[520px] group perspective-[1200px]">
-          
-          {/* Dynamic Ambient Blur Glow behind the 3D Phone Setup */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none transition-all duration-700 group-hover:scale-110 group-hover:bg-emerald-500/15" />
-          
-          <div className="relative w-full max-w-[480px] flex items-center justify-center transition-all duration-700 ease-out transform-gpu group-hover:-translate-y-2 group-hover:scale-105">
-            {/* Ultra High-Def Master 3D Overlapping Phones Asset */}
-            <img
-              src={INSTAGRAM_3D_PHONES_BASE64}
-              alt="The Nuva Nutrition Instagram 3D Mobile Showcase"
-              className="w-full h-auto max-h-[520px] object-contain select-none pointer-events-none drop-shadow-[0_25px_35px_rgba(0,0,0,0.18)]"
+    <section
+      data-section-key="home.instagram"
+      className="relative w-full bg-white px-4 sm:px-6 lg:px-8 pt-10 pb-12 md:pt-32 md:pb-36 xl:pt-40 xl:pb-44 overflow-hidden font-sans"
+    >
+      <div className="relative max-w-[1320px] mx-auto">
+
+        {/* ---------- md and up: phone over the tilted band ---------- */}
+        <div className="relative hidden md:block h-[340px] lg:h-[380px] xl:h-[440px]">
+          <BandShape />
+
+          {/* Phone, centred on the band's height and spilling out of both edges.
+              The centring lives on the wrapper: the rise-in animates the image's
+              own transform, which would otherwise wipe out the translate. */}
+          <div className="absolute top-1/2 -translate-y-1/2 left-[6%] z-10 w-[240px] lg:w-[300px] xl:w-[360px]">
+            <motion.img
+              src={phoneImage}
+              alt={`Nuva Nutrition Instagram profile ${handle}`}
+              className="w-full h-auto select-none pointer-events-none"
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-80px' }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
               loading="lazy"
+              draggable={false}
             />
+          </div>
+
+          <div className="relative h-full grid grid-cols-[40%_1fr_auto] items-center gap-6 pr-10 lg:pr-14 xl:pr-16">
+            <div />
+
+            {/* Heading and handle */}
+            <div className="pt-6">
+              <h2 className="font-display text-[42px] lg:text-[54px] xl:text-[64px] 2xl:text-[72px] font-bold text-[#3b5634] tracking-tight leading-[1.08]">
+                {headingLine1}
+                <br />
+                {headingLine2}
+              </h2>
+              <a
+                href={profileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-7 inline-flex items-center px-7 py-3 xl:px-8 xl:py-3.5 rounded-full border border-[#2d472c]/70 text-[#3b5634] text-lg xl:text-xl hover:bg-[#2d472c] hover:text-white hover:border-[#2d472c] transition-colors"
+              >
+                {handle}
+              </a>
+            </div>
+
+            {/* QR code in a white arch standing on the band's floor */}
+            <a
+              href={profileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open ${handle} on Instagram`}
+              className="self-end block w-[180px] lg:w-[210px] xl:w-[250px] bg-white rounded-t-full rounded-b-3xl px-4 lg:px-5 xl:px-6 pt-14 lg:pt-16 xl:pt-20 pb-5 xl:pb-6 transition-transform duration-300 hover:-translate-y-1"
+            >
+              <img
+                src={qrImage}
+                alt={`Scan to open ${handle} on Instagram`}
+                className="w-full h-auto select-none"
+                loading="lazy"
+                draggable={false}
+              />
+            </a>
           </div>
         </div>
 
-        {/* Right Side: Text & Follow Callout */}
-        <div className="w-full md:w-1/2 space-y-6 text-center md:text-left">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#f4ece1] text-[#2d472c] text-xs font-bold uppercase tracking-wider shadow-2xs border border-[#e8ddce]">
-            <Instagram className="h-4 w-4 text-[#2d472c]" />
-            <span>{handle}</span>
-          </div>
-
-          <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-bold text-[#2d472c] font-display tracking-tight leading-tight">
-            {title}
-          </h2>
-
-          <p className="text-xs sm:text-sm text-neutral-600 font-sans leading-relaxed max-w-lg">
-            {subtitle}
-          </p>
-
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4">
+        {/* ---------- Phones: stacked ---------- */}
+        <div className="md:hidden relative pt-48">
+          <div className="relative rounded-[32px] px-6 pt-60 pb-10 text-center" style={{ background: BAND }}>
+            <h2 className="font-display text-[40px] font-bold text-[#3b5634] tracking-tight leading-[1.1]">
+              {headingLine1}
+              <br />
+              {headingLine2}
+            </h2>
             <a
-              href={instagramUrl}
+              href={profileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-[#2d472c] hover:bg-[#20341f] text-white text-xs sm:text-sm font-bold shadow-lg transition-all duration-200 active:scale-95 hover:shadow-xl hover:-translate-y-0.5"
+              className="mt-5 inline-flex items-center px-6 py-2.5 rounded-full border border-[#2d472c]/70 text-[#3b5634] text-base hover:bg-[#2d472c] hover:text-white transition-colors"
             >
-              <Instagram className="h-4 w-4" />
-              <span>{buttonText}</span>
+              {handle}
             </a>
-
-            <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">
-              <Sparkles className="w-4 h-4 text-emerald-600" />
-              <span>Daily Sunrise Harvest Stories</span>
-            </div>
           </div>
+
+          <img
+            src={phoneImage}
+            alt={`Nuva Nutrition Instagram profile ${handle}`}
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-[250px] h-auto select-none pointer-events-none"
+            loading="lazy"
+            draggable={false}
+          />
         </div>
 
       </div>

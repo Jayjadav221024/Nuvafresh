@@ -8,6 +8,7 @@ import RegenerativeVideoSection from '../components/home/RegenerativeVideoSectio
 import UVOzonePurificationSection from '../components/home/UVOzonePurificationSection';
 import TestimonialsSection from '../components/home/TestimonialsSection';
 import Reel3DSection from '../components/home/Reel3DSection';
+import GiftingSection from '../components/home/GiftingSection';
 import CertificationsSection from '../components/home/CertificationsSection';
 import BlogSection from '../components/home/BlogSection';
 import InstagramFollowSection from '../components/home/InstagramFollowSection';
@@ -156,6 +157,9 @@ const HomePage = () => {
 
       {/* 7. Video Shopping / Interactive Reels Section */}
       <Reel3DSection />
+
+      {/* 7.1 Thoughtfully Picked for Your Loved Ones (gift hamper banners) */}
+      <GiftingSection />
 
       {/* 8. UV-Washed. RO-Purified. Ozone-Safe. Section (3-Column Hygiene Process) */}
       <UVOzonePurificationSection />
